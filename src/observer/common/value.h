@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/memory.h"
 #include "common/type/attr_type.h"
 #include "common/type/data_type.h"
+#include "common/type/date_type.h"
 
 /**
  * @brief 属性的值
@@ -25,6 +26,7 @@ See the Mulan PSL v2 for more details. */
  * @details 与DataType，就是数据类型，配套完成各种算术运算、比较、类型转换等操作。这里同时记录了数据的值与类型。
  * 当需要对值做运算时，建议使用类似 Value::add 的操作而不是 DataType::add。在进行运算前，应该设置好结果的类型，
  * 比如进行两个INT类型的除法运算时，结果类型应该设置为FLOAT。
+ * 通过 friend 关键字可以授予其他类或函数访问本类私有和受保护成员的权限。
  */
 class Value final
 {
@@ -35,6 +37,7 @@ public:
   friend class BooleanType;
   friend class CharType;
   friend class VectorType;
+  friend class DateType;
 
   Value() = default;
 
@@ -90,6 +93,7 @@ public:
   void set_data(const char *data, int length) { this->set_data(const_cast<char *>(data), length); }
   void set_value(const Value &value);
   void set_boolean(bool val);
+  void set_date(int y, int m, int d);
 
   string to_string() const;
 
@@ -125,7 +129,7 @@ private:
     int32_t int_value_;
     float   float_value_;
     bool    bool_value_;
-    char   *pointer_value_;
+    char   *pointer_value_; // 联合体，对上面的值赋值后，可以通过这个指针获取对应值
   } value_ = {.int_value_ = 0};
 
   /// 是否申请并占有内存, 目前对于 CHARS 类型 own_data_ 为true, 其余类型 own_data_ 为false

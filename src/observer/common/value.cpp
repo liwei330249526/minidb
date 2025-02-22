@@ -125,6 +125,11 @@ void Value::set_data(char *data, int length)
       value_.bool_value_ = *(int *)data != 0;
       length_            = length;
     } break;
+    case AttrType::DATES: {
+    	// select 的时候， 会走到这里date 数据转换为 Value
+	    value_.int_value_ = *(int *)data;
+	    length_            = length;
+    } break;
     default: {
       LOG_WARN("unknown data type: %d", attr_type_);
     } break;
@@ -326,4 +331,9 @@ bool Value::get_boolean() const
     }
   }
   return false;
+}
+void Value::set_date(int y, int m, int d){
+	this->attr_type_ = AttrType::DATES;
+	this->value_.int_value_ = y * 10000 + m * 100 + d;
+	return;
 }

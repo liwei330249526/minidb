@@ -25,10 +25,22 @@ RC CharType::set_value_from_str(Value &val, const string &data) const
   val.set_string(data.c_str());
   return RC::SUCCESS;
 }
-
+// 将char 类型的 Value 转换为 DATE类型的 Value
 RC CharType::cast_to(const Value &val, AttrType type, Value &result) const
 {
   switch (type) {
+  	case AttrType::DATES :
+	  {
+			int y, m, d;
+			if (sscanf(val.value_.pointer_value_, "%d-%d-%d", &y, &m, &d) != 3) {
+				return RC::INVALID_ARGUMENT;
+			}
+			if (!common::checkDate(y, m, d)) {
+				return RC::INVALID_ARGUMENT;
+			}
+			result.set_date(y, m, d);
+	  }break;
+
     default: return RC::UNIMPLEMENTED;
   }
   return RC::SUCCESS;
@@ -38,7 +50,11 @@ int CharType::cast_cost(AttrType type)
 {
   if (type == AttrType::CHARS) {
     return 0;
+  } else if(type == AttrType::DATES) {
+  	// 如果 cost 值较小，则可以转换
+  	return 1;
   }
+
   return INT32_MAX;
 }
 

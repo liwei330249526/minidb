@@ -236,6 +236,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   file_name_ = file_name;
   file_desc_ = fd;
 
+  // 读出第一个page 的数据
   Page header_page;
   int ret = readn(file_desc_, &header_page, sizeof(header_page));
   if (ret != 0) {
@@ -246,6 +247,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   }
 
   BPFileHeader *tmp_file_header = reinterpret_cast<BPFileHeader *>(header_page.data);
+  // buffer_pool_id_ 对应一个 data 文件
   buffer_pool_id_ = tmp_file_header->buffer_pool_id;
 
   RC rc = allocate_frame(BP_HEADER_PAGE, &hdr_frame_);
@@ -843,7 +845,7 @@ RC BufferPoolManager::open_file(LogHandler &log_handler, const char *_file_name,
     LOG_WARN("file already opened. file name=%s", _file_name);
     return RC::BUFFERPOOL_OPEN;
   }
-
+  // 一个 data 文件对应个 DiskBufferPool
   DiskBufferPool *bp = new DiskBufferPool(*this, frame_manager_, *dblwr_buffer_, log_handler);
   RC              rc = bp->open_file(_file_name);
   if (rc != RC::SUCCESS) {

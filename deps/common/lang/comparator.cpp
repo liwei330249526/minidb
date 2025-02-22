@@ -66,4 +66,32 @@ int compare_string(void *arg1, int arg1_max_length, void *arg2, int arg2_max_len
   return 0;
 }
 
+
+// 判断是否为闰年
+bool isLeapYear(int year) {
+	return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+// 校验日期是否合法
+bool checkDate(int y, int m, int d) {
+	// 检查年份是否合法
+	if (y <= 0) {
+		return false;
+	}
+	// 检查月份是否合法
+	if (m < 1 || m > 12) {
+		return false;
+	}
+	// 每个月的天数
+	int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	// 如果是闰年，2 月有 29 天
+	if (isLeapYear(y)) {
+		daysInMonth[1] = 29;
+	}
+	// 检查日期是否合法
+	if (d < 1 || d > daysInMonth[m - 1]) {
+		return false;
+	}
+	return true;
+}
 }  // namespace common

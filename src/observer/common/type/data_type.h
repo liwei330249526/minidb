@@ -31,6 +31,9 @@ public:
 
   virtual ~DataType() = default;
 
+		/**
+	 * @brief 通过 attr_type 类型获取一个该类型的实例，实例实际上就是该数据类型的一个uniq 智能指针
+	 */
   inline static DataType *type_instance(AttrType attr_type)
   {
     return type_instances_.at(static_cast<int>(attr_type)).get();
@@ -84,6 +87,8 @@ public:
 
   /**
    * @brief 计算从 type 到 attr_type 的隐式转换的 cost，如果无法转换，返回 INT32_MAX
+   * 计算类型转换的cost， 例如 where date_a < '2020-2-2', 字符串转换为date 类型cost比较小， 我们
+   * 可以将字符串转换为date 类型，然后再做比较操作。
    */
   virtual int cast_cost(AttrType type)
   {
@@ -97,6 +102,6 @@ public:
 
 protected:
   AttrType attr_type_;
-
+  // 静态成员变量 type_instances_
   static array<unique_ptr<DataType>, static_cast<int>(AttrType::MAXTYPE)> type_instances_;
 };
