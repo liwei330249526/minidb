@@ -145,16 +145,19 @@ private:
   RC     free_internal(const FrameId &frame_id, Frame *frame);
 
 private:
+		// 这是一个函数对象类，重载了 () 运算符，用于计算 FrameId 类型对象的哈希值。通过调用 FrameId 对象的 hash() 方法来获取哈希值。
   class BPFrameIdHasher
   {
   public:
     size_t operator()(const FrameId &frame_id) const { return frame_id.hash(); }
   };
-
+	// 定义了一个类型别名 FrameLruCache，它是 common::LruCache 模板类的一个实例，使用 FrameId 作为键类型，Frame* 作为值类型，BPFrameIdHasher 作为哈希函数类型
   using FrameLruCache  = common::LruCache<FrameId, Frame *, BPFrameIdHasher>;
+  // 内存池
   using FrameAllocator = common::MemPoolSimple<Frame>;
 
   mutex          lock_;
+
   FrameLruCache  frames_;
   FrameAllocator allocator_;
 };
@@ -327,6 +330,7 @@ public:
   RC init(unique_ptr<DoubleWriteBuffer> dblwr_buffer);
 
   RC create_file(const char *file_name);
+  RC drop_file(const char *file_name);
   RC open_file(LogHandler &log_handler, const char *file_name, DiskBufferPool *&bp);
   RC close_file(const char *file_name);
 
@@ -349,7 +353,7 @@ private:
   unique_ptr<DoubleWriteBuffer> dblwr_buffer_;
 
   common::Mutex                            lock_;
-  unordered_map<string, DiskBufferPool *>  buffer_pools_;
-  unordered_map<int32_t, DiskBufferPool *> id_to_buffer_pools_;
+  unordered_map<string, DiskBufferPool *>  buffer_pools_; // path : DiskBufferPool
+  unordered_map<int32_t, DiskBufferPool *> id_to_buffer_pools_; //
   atomic<int32_t>                          next_buffer_pool_id_{1};  // 系统启动时，会打开所有的表，这样就可以知道当前系统最大的ID是多少了
 };

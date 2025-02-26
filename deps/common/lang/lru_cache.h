@@ -18,16 +18,16 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/unordered_set.h"
 
 namespace common {
-
+// FrameId, Frame *, BPFrameIdHasher
 template <typename Key, typename Value, typename Hash = hash<Key>, typename Pred = equal_to<Key>>
 class LruCache
 {
-
+  // 这是一个双向链表节点类，
   class ListNode
   {
   public:
-    Key   key_;
-    Value value_;
+    Key   key_; // FrameId
+    Value value_; // Frame *
 
     ListNode *prev_ = nullptr;
     ListNode *next_ = nullptr;
@@ -35,7 +35,8 @@ class LruCache
   public:
     ListNode(const Key &key, const Value &value) : key_(key), value_(value) {}
   };
-
+  // 类， 重载了(), 使用hasher_ 计算key 的hash值
+  // 这是一个函数对象类，用于计算 ListNode* 类型对象的哈希值。通过调用 hasher_ 对节点的键进行哈希计算。
   class PListNodeHasher
   {
   public:
@@ -50,7 +51,7 @@ class LruCache
   private:
     Hash hasher_;
   };
-
+  // 比较
   class PListNodePredicator
   {
   public:
@@ -80,7 +81,7 @@ public:
   }
 
   ~LruCache() { destroy(); }
-
+  // 遍历 searcher_ 中的所有节点，释放节点的内存，然后清空 searcher_，并将链表的头指针和尾指针置为 nullptr
   void destroy()
   {
     for (ListNode *node : searcher_) {
@@ -91,9 +92,9 @@ public:
     lru_front_ = nullptr;
     lru_tail_  = nullptr;
   }
-
+  // 返回缓存中键值对的数量。
   size_t count() const { return searcher_.size(); }
-
+  // 尝试从缓存中查找指定键的值。如果找到，调用 lru_touch() 方法将该节点移动到链表头部（表示最近使用），并将值赋给 value，返回 true；如果未找到，返回 false。
   bool get(const Key &key, Value &value)
   {
     auto iter = searcher_.find((ListNode *)&key);
@@ -105,7 +106,7 @@ public:
     value = (*iter)->value_;
     return true;
   }
-
+  // 如果键已经存在于缓存中，更新该键对应的值，并将该节点移动到链表头部；如果键不存在，创建一个新的节点，并将其插入到链表头部。
   void put(const Key &key, const Value &value)
   {
     auto iter = searcher_.find((ListNode *)&key);
@@ -119,7 +120,7 @@ public:
     ListNode *ln = new ListNode(key, value);
     lru_push(ln);
   }
-
+  // 尝试从缓存中移除指定键的节点。如果找到，调用 lru_remove() 方法将该节点从链表和 searcher_ 中移除。
   void remove(const Key &key)
   {
     auto iter = searcher_.find((ListNode *)&key);
@@ -155,6 +156,7 @@ public:
   }
 
 private:
+		// 方法将指定节点移动到链表头部，表示该节点最近被使用。
   void lru_touch(ListNode *node)
   {
     // move node to front
@@ -177,7 +179,7 @@ private:
     }
     lru_front_ = node;
   }
-
+  // 方法将指定节点插入到链表头部。
   void lru_push(ListNode *node)
   {
     // push front
@@ -194,7 +196,7 @@ private:
     lru_front_ = node;
     searcher_.insert(node);
   }
-
+  // 方法将指定节点从链表和 searcher_ 中移除，并释放节点的内存。
   void lru_remove(ListNode *node)
   {
     if (node->prev_ != nullptr) {

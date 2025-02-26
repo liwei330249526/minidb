@@ -24,7 +24,7 @@ bool FrameId::equal_to(const FrameId &other) const
 }
 
 bool FrameId::operator==(const FrameId &other) const { return this->equal_to(other); }
-
+// buffer_pool_id_ 和 page_num_ 计算一个hash 值
 size_t FrameId::hash() const { return (static_cast<size_t>(buffer_pool_id_) << 32L) | page_num_; }
 
 int     FrameId::buffer_pool_id() const { return buffer_pool_id_; }

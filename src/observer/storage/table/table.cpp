@@ -127,6 +127,42 @@ RC Table::create(Db *db, int32_t table_id, const char *path, const char *name, c
   return rc;
 }
 
+RC Table::drop(Db *db, const char *baseDir, const char *name) {
+	// drop index
+	RC rc = RC::SUCCESS;
+	for(auto &index : indexes_) {
+//		index->index_meta().name()
+		string indexPath = table_index_file(baseDir, name, index->index_meta().name());
+		index->drop(this, indexPath.c_str(), index->index_meta());
+	}
+
+	// destroy record handler
+	record_handler_->close();
+	delete record_handler_; // ?
+	record_handler_ = nullptr;
+
+
+	// date file
+	string             data_file = table_data_file(baseDir, name);
+	BufferPoolManager &bpm       = db->buffer_pool_manager();
+	rc                           = bpm.drop_file(data_file.c_str());
+	if (rc != RC::SUCCESS) {
+		LOG_ERROR("Failed to create disk buffer pool of data file. file name=%s", data_file.c_str());
+		return rc;
+	}
+
+	//  meta file
+	// 元数据文件直接建的，我们直接删除
+	string             meta_file = table_meta_file(baseDir, name);
+	int remove_ret = ::remove(meta_file.c_str());
+	if (remove_ret != 0) {
+		// 失败
+		LOG_ERROR("Failed to remove data file. file name=%s", meta_file.c_str());
+		return RC::NOT_EXIST;
+	}
+	return rc;
+}
+
 RC Table::open(Db *db, const char *meta_file, const char *base_dir)
 {
   // 加载元数据文件

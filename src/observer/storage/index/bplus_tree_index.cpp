@@ -44,6 +44,22 @@ RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &
   return RC::SUCCESS;
 }
 
+RC BplusTreeIndex::drop(Table *table, const char *file_name, const IndexMeta &index_meta)
+{
+	RC rc = RC::SUCCESS;
+	rc = this->close();
+	if(rc != RC::SUCCESS) {
+		return RC::FILE_CLOSE;
+	}
+
+	BufferPoolManager &bpm = table->db()->buffer_pool_manager();
+	rc = bpm.drop_file(file_name);
+	if(rc != RC::SUCCESS) {
+		return RC::FILE_CLOSE;
+	}
+	return rc;
+}
+
 RC BplusTreeIndex::open(Table *table, const char *file_name, const IndexMeta &index_meta, const FieldMeta &field_meta)
 {
   if (inited_) {

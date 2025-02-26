@@ -366,21 +366,21 @@ int writen(int fd, const void *buf, int size)
   }
   return 0;
 }
-
+// 读取 fd 的 size 大小数据 到 buf起始位置
 int readn(int fd, void *buf, int size)
 {
   char *tmp = (char *)buf;
   while (size > 0) {
     const ssize_t ret = ::read(fd, tmp, size);
-    if (ret > 0) {
-      tmp += ret;
-      size -= ret;
+    if (ret > 0) { // 读了ret 字节
+      tmp += ret;  // 存储位置增加
+      size -= ret; // 剩余读取多少字节
       continue;
     }
-    if (0 == ret)
+    if (0 == ret) // 读完了
       return -1;  // end of file
 
-    const int err = errno;
+    const int err = errno; // errno 是一个全局变量，如果
     if (EAGAIN != err && EINTR != err)
       return err;
   }
