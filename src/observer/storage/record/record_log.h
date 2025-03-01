@@ -60,10 +60,10 @@ private:
 
 struct RecordLogHeader
 {
-  int32_t buffer_pool_id;
-  int32_t operation_type;
-  PageNum page_num;
-  int32_t storage_format;
+  int32_t buffer_pool_id; // 哪个文件
+  int32_t operation_type; // 什么操作，例如 insert
+  PageNum page_num; // 哪个page
+  int32_t storage_format; // 存储模式
   int32_t column_num;
   union
   {
@@ -126,7 +126,7 @@ public:
   RC update_record(Frame *frame, const RID &rid, const char *record);
 
 private:
-  LogHandler   *log_handler_    = nullptr;
+  LogHandler   *log_handler_    = nullptr; // 日志管理
   int32_t       buffer_pool_id_ = -1;
   int32_t       record_size_    = -1;
   StorageFormat storage_format_ = StorageFormat::ROW_FORMAT;

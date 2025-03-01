@@ -130,7 +130,7 @@ RC MvccTrx::insert_record(Table *table, Record &record)
   Field begin_field;
   Field end_field;
   trx_fields(table, begin_field, end_field);
-
+  // 设置mvcc 事务id？
   begin_field.set_int(record, -trx_id_);
   end_field.set_int(record, trx_kit_.max_trx_id());
 
@@ -252,6 +252,7 @@ void MvccTrx::trx_fields(Table *table, Field &begin_xid_field, Field &end_xid_fi
 {
   const TableMeta      &table_meta = table->table_meta();
   span<const FieldMeta> trx_fields = table_meta.trx_fields();
+  // 如果条件为假，则报错
   ASSERT(trx_fields.size() >= 2, "invalid trx fields number. %d", trx_fields.size());
 
   begin_xid_field.set_table(table);

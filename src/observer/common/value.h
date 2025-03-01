@@ -121,7 +121,7 @@ private:
   void set_string_from_other(const Value &other);
 
 private:
-  AttrType attr_type_ = AttrType::UNDEFINED;
+  AttrType attr_type_ = AttrType::UNDEFINED; // 值类型
   int      length_    = 0;
 
   union Val

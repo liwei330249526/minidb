@@ -41,6 +41,7 @@ public:
   int          value_amount() const { return value_amount_; }
 
 private:
+		// InsertStmt 保存了3个东西， table， 值， 值数量
   Table       *table_        = nullptr;
   const Value *values_       = nullptr;
   int          value_amount_ = 0;

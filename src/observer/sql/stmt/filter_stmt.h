@@ -23,11 +23,14 @@ See the Mulan PSL v2 for more details. */
 class Db;
 class Table;
 class FieldMeta;
-
+// filter 对象， 字段， 值
 struct FilterObj
 {
+		// 是属性；
   bool  is_attr;
+  //  字段；
   Field field;
+  //  值
   Value value;
 
   void init_attr(const Field &field)
@@ -42,7 +45,7 @@ struct FilterObj
     this->value = value;
   }
 };
-
+// filter 单元
 class FilterUnit
 {
 public:
@@ -60,6 +63,7 @@ public:
   const FilterObj &right() const { return right_; }
 
 private:
+		// 操作符，左边对象，右边对象
   CompOp    comp_ = NO_OP;
   FilterObj left_;
   FilterObj right_;

@@ -74,7 +74,7 @@ RC SqlTaskHandler::handle_sql(SQLStageEvent *sql_event)
     LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
     return rc;
   }
-
+  //
   rc = optimize_stage_.handle_request(sql_event);
   if (rc != RC::UNIMPLEMENTED && rc != RC::SUCCESS) {
     LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));

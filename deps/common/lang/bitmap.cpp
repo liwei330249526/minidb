@@ -18,6 +18,7 @@ namespace common {
 
 int find_first_zero(char byte, int start)
 {
+	// 遍历每个位，找到第一个为0 的位置； 从右到左数， 0 1 2 3 4 5 6 7； 可以看出为0 则说明位置是空的
   for (int i = start; i < 8; i++) {
     if ((byte & (1 << i)) == 0) {
       return i;
@@ -52,7 +53,7 @@ bool Bitmap::get_bit(int index)
   char bits = bitmap_[index / 8];
   return (bits & (1 << (index % 8))) != 0;
 }
-
+// 设置这个位为 1，即这个位置右数据了
 void Bitmap::set_bit(int index)
 {
   char &bits = bitmap_[index / 8];
@@ -69,8 +70,10 @@ int Bitmap::next_unsetted_bit(int start)
 {
   int ret           = -1;
   int start_in_byte = start % 8;
+  // 遍历每个字节
   for (int iter = start / 8, end = bytes(size_); iter < end; iter++) {
     char byte = bitmap_[iter];
+    // byte == -1 ,即char 的所有位为1， 说明满了； 否则说明未满
     if (byte != -1) {
       int index_in_byte = find_first_zero(byte, start_in_byte);
       if (index_in_byte >= 0) {

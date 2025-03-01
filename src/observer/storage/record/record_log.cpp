@@ -111,9 +111,11 @@ RC RecordLogHandler::init_new_page(Frame *frame, PageNum page_num, span<const ch
 
 RC RecordLogHandler::insert_record(Frame *frame, const RID &rid, const char *record)
 {
+	// 记录-头； 记录-data
   const int        log_payload_size = RecordLogHeader::SIZE + record_size_;
   vector<char>     log_payload(log_payload_size);
   RecordLogHeader *header = reinterpret_cast<RecordLogHeader *>(log_payload.data());
+  // 填充头，和data
   header->buffer_pool_id  = buffer_pool_id_;
   header->operation_type  = RecordOperation(RecordOperation::Type::INSERT).type_id();
   header->page_num        = rid.page_num;
@@ -122,6 +124,7 @@ RC RecordLogHandler::insert_record(Frame *frame, const RID &rid, const char *rec
   memcpy(log_payload.data() + RecordLogHeader::SIZE, record, record_size_);
 
   LSN lsn = 0;
+  // 将日志加入到缓存
   RC  rc  = log_handler_->append(lsn, LogModule::Id::RECORD_MANAGER, std::move(log_payload));
   if (OB_SUCC(rc) && lsn > 0) {
     frame->set_lsn(lsn);
@@ -151,6 +154,7 @@ RC RecordLogHandler::update_record(Frame *frame, const RID &rid, const char *rec
 
 RC RecordLogHandler::delete_record(Frame *frame, const RID &rid)
 {
+	// 构造记录 header，将header append 日志缓存
   RecordLogHeader header;
   header.buffer_pool_id = buffer_pool_id_;
   header.operation_type = RecordOperation(RecordOperation::Type::DELETE).type_id();

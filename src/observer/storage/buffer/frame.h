@@ -46,8 +46,8 @@ public:
   string to_string() const;
 
 private:
-  int     buffer_pool_id_ = -1;
-  PageNum page_num_       = -1;
+  int     buffer_pool_id_ = -1;  // frame 关联的buffer_pool_id_， 即关联的文件
+  PageNum page_num_       = -1;  // frame 关联的page
 };
 
 /**

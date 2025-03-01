@@ -45,6 +45,7 @@ bool stmt_type_ddl(StmtType type)
     }
   }
 }
+// Stmt *&stmt  指针引用， 函数内部可以更改指针的指向，函数外部使用这个指针
 RC Stmt::create_stmt(Db *db, ParsedSqlNode &sql_node, Stmt *&stmt)
 {
   stmt = nullptr;

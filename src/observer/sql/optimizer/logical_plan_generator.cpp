@@ -163,22 +163,29 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
     unique_ptr<Expression> right(filter_obj_right.is_attr
                                      ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
                                      : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
-
+    // 如果left 和right 的类型不相等，则满足需要； 即例如 age>10, 即左边是列名，右边是值
     if (left->value_type() != right->value_type()) {
+    	// 计算 left 转换为 right 类型的cost； 和right 转换为 left 类型的cost
       auto left_to_right_cost = implicit_cast_cost(left->value_type(), right->value_type());
       auto right_to_left_cost = implicit_cast_cost(right->value_type(), left->value_type());
       if (left_to_right_cost <= right_to_left_cost && left_to_right_cost != INT32_MAX) {
+      	// left 转换为 right 类型
         ExprType left_type = left->type();
+        // 转换表达式
         auto cast_expr = make_unique<CastExpr>(std::move(left), right->value_type());
         if (left_type == ExprType::VALUE) {
+        	// 左边是值， 例如 10<age,
           Value left_val;
+          // 根据转换表达式获取转换后的值
           if (OB_FAIL(rc = cast_expr->try_get_value(left_val)))
           {
             LOG_WARN("failed to get value from left child", strrc(rc));
             return rc;
           }
+          // 根据转换后的值构造 ValueExpr
           left = make_unique<ValueExpr>(left_val);
         } else {
+        	// 如果左边是列明，则直接赋值转换表达式
           left = std::move(cast_expr);
         }
       } else if (right_to_left_cost < left_to_right_cost && right_to_left_cost != INT32_MAX) {
@@ -202,7 +209,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
         return rc;
       }
     }
-
+    // 比较表达式， op, 左边， 右边
     ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
     cmp_exprs.emplace_back(cmp_expr);
   }
@@ -234,13 +241,14 @@ RC LogicalPlanGenerator::create_plan(InsertStmt *insert_stmt, unique_ptr<Logical
   logical_operator.reset(insert_operator);
   return RC::SUCCESS;
 }
-
+// delete -- predicate -- get
 RC LogicalPlanGenerator::create_plan(DeleteStmt *delete_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
   Table                      *table       = delete_stmt->table();
   FilterStmt                 *filter_stmt = delete_stmt->filter_stmt();
+  // get 操作
   unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, ReadWriteMode::READ_WRITE));
-
+  // 谓词操作
   unique_ptr<LogicalOperator> predicate_oper;
 
   RC rc = create_plan(filter_stmt, predicate_oper);

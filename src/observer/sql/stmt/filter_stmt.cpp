@@ -67,7 +67,7 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
     LOG_WARN("No such table: attr.relation_name: %s", attr.relation_name.c_str());
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
-
+  // 根据列名获取列元数据
   field = table->table_meta().field(attr.attribute_name.c_str());
   if (nullptr == field) {
     LOG_WARN("no such field in table: table %s, field %s", table->name(), attr.attribute_name.c_str());
@@ -77,7 +77,7 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
 
   return RC::SUCCESS;
 }
-
+// 创建一个条件
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
     const ConditionSqlNode &condition, FilterUnit *&filter_unit)
 {
@@ -90,7 +90,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
 
   filter_unit = new FilterUnit;
-
+  // 左边是属性，即列名
   if (condition.left_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -103,11 +103,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_left(filter_obj);
   } else {
+  	// 左边是值
     FilterObj filter_obj;
     filter_obj.init_value(condition.left_value);
     filter_unit->set_left(filter_obj);
   }
-
+  // 右边是属性，即列名
   if (condition.right_is_attr) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -120,11 +121,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_right(filter_obj);
   } else {
+  	// 右边是值
     FilterObj filter_obj;
     filter_obj.init_value(condition.right_value);
     filter_unit->set_right(filter_obj);
   }
-
+  // 设置操作符
   filter_unit->set_comp(comp);
 
   // 检查两个类型是否能够比较

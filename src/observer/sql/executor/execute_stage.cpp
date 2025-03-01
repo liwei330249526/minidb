@@ -50,7 +50,7 @@ RC ExecuteStage::handle_request(SQLStageEvent *sql_event)
   }
   return rc;
 }
-
+// 执行物理计划
 RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
 {
   RC rc = RC::SUCCESS;

@@ -281,7 +281,7 @@ RC RowRecordPageHandler::insert_record(const char *data, RID *rid)
   int    index = bitmap.next_unsetted_bit(0);
   bitmap.set_bit(index);
   page_header_->record_num++;
-
+  // 先写日志，再写数据
   RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
   if (OB_FAIL(rc)) {
     LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
@@ -289,11 +289,12 @@ RC RowRecordPageHandler::insert_record(const char *data, RID *rid)
   }
 
   // assert index < page_header_->record_capacity
+  // 获取这个index 的起始位置指针， 将 记录 数据拷贝到指定的这个位置， 并设置frame 为脏
   char *record_data = get_record_data(index);
   memcpy(record_data, data, page_header_->record_real_size);
 
   frame_->mark_dirty();
-
+  // 返回 rid
   if (rid) {
     rid->page_num = get_page_num();
     rid->slot_num = index;
@@ -331,6 +332,7 @@ RC RowRecordPageHandler::delete_record(const RID *rid)
   ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY, 
          "cannot delete record from page while the page is readonly");
 
+  // 如果 该page 的slot_num 位置有数据，则清楚bitmap 标记，并计数-1， 并设置frame 为脏， 然后写删除数据日志
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
   if (bitmap.get_bit(rid->slot_num)) {
     bitmap.clear_bit(rid->slot_num);
@@ -538,7 +540,7 @@ RC RecordFileHandler::init_free_pages()
   LOG_INFO("record file handler init free pages done. free page num=%d, rc=%s", free_pages_.size(), strrc(rc));
   return rc;
 }
-
+// 将记录插入文件，返回记录标识符，即记录位置
 RC RecordFileHandler::insert_record(const char *data, int record_size, RID *rid)
 {
   RC ret = RC::SUCCESS;
@@ -619,19 +621,19 @@ RC RecordFileHandler::recover_insert_record(const char *data, int record_size, c
 
   return record_page_handler->recover_insert_record(data, rid);
 }
-
+// 删除指定位置的记录
 RC RecordFileHandler::delete_record(const RID *rid)
 {
   RC rc = RC::SUCCESS;
 
   unique_ptr<RecordPageHandler> record_page_handler(RecordPageHandler::create(storage_format_));
-
+  // 初始化，指定了 disk_buffer_pool_（文件）， page_num (页)
   rc = record_page_handler->init(*disk_buffer_pool_, *log_handler_, rid->page_num, ReadWriteMode::READ_WRITE);
   if (OB_FAIL(rc)) {
     LOG_ERROR("Failed to init record page handler.page number=%d. rc=%s", rid->page_num, strrc(rc));
     return rc;
   }
-
+  // rid 指定了要删除的记录再page 上的位置
   rc = record_page_handler->delete_record(rid);
   // 📢 这里注意要清理掉资源，否则会与insert_record中的加锁顺序冲突而可能出现死锁
   // delete record的加锁逻辑是拿到页面锁，删除指定记录，然后加上和释放record manager锁

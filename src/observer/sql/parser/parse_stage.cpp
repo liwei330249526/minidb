@@ -35,7 +35,7 @@ RC ParseStage::handle_request(SQLStageEvent *sql_event)
   const std::string &sql        = sql_event->sql();
 
   ParsedSqlResult parsed_sql_result;
-
+  // 将sql 语句传入， 解析解析得到 ParsedSqlResult
   parse(sql.c_str(), &parsed_sql_result);
   if (parsed_sql_result.sql_nodes().empty()) {
     sql_result->set_return_code(RC::SUCCESS);

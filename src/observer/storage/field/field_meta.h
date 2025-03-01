@@ -52,8 +52,8 @@ public:
 
 protected:
   string   name_;
-  AttrType attr_type_;
-  int      attr_offset_;
+  AttrType attr_type_; // 列类型
+  int      attr_offset_; // 这个列所在的地址偏移
   int      attr_len_;
   bool     visible_;
   int      field_id_;

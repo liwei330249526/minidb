@@ -36,6 +36,7 @@ public:
   std::vector<Value>       &values() { return values_; }
 
 private:
+		// 插入逻辑算子
   Table             *table_ = nullptr;
   std::vector<Value> values_;
 };

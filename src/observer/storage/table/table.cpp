@@ -311,6 +311,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     const Value &    value = values[i];
     if (field->type() != value.attr_type()) {
       Value real_value;
+      // 类型不同，则尝试类型转换，将新值保存在 real_value
       rc = Value::cast_to(value, field->type(), real_value);
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to cast value. table name:%s,field name:%s,value:%s ",
@@ -331,12 +332,14 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
   record.set_data_owner(record_data, record_size);
   return RC::SUCCESS;
 }
-
+// 设置 value 到record_data 指针位置， field 是列的元数据
 RC Table::set_value_to_record(char *record_data, const Value &value, const FieldMeta *field)
 {
   size_t       copy_len = field->len();
   const size_t data_len = value.length();
   if (field->type() == AttrType::CHARS) {
+  	// 如果record 空间该字段的空间大小更大， 则复制 value 数据长度+1
+  	// 如果record 空间该字段的空间大小更小，则复制空间长度
     if (copy_len > data_len) {
       copy_len = data_len + 1;
     }
@@ -502,12 +505,14 @@ RC Table::delete_record(const RID &rid)
 RC Table::delete_record(const Record &record)
 {
   RC rc = RC::SUCCESS;
+  // 先删除索引
   for (Index *index : indexes_) {
     rc = index->delete_entry(record.data(), &record.rid());
     ASSERT(RC::SUCCESS == rc, 
            "failed to delete entry from index. table name=%s, index name=%s, rid=%s, rc=%s",
            name(), index->index_meta().name(), record.rid().to_string().c_str(), strrc(rc));
   }
+  // 再删除数据
   rc = record_handler_->delete_record(&record.rid());
   return rc;
 }

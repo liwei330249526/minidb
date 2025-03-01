@@ -45,6 +45,7 @@ public:
   static StorageFormat get_storage_format(const char *format_str);
 
 private:
+		//  CreateTableStmt 只保存了三个值， table name， 列属性， 存储格式
   std::string                  table_name_;
   std::vector<AttrInfoSqlNode> attr_infos_;
   StorageFormat                storage_format_;

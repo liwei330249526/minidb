@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
+// 字段，包括表， 字段元数据
 /**
  * @brief 字段
  *
