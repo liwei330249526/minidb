@@ -16,3 +16,10 @@ See the Mulan PSL v2 for more details. */
 
 UpdateLogicalOperator::UpdateLogicalOperator(Table *table, string attribute_names, Value values) : table_(table),
                                             attribute_names_(attribute_names), values_(values) {}
+
+string UpdateLogicalOperator::getAttributeNames() {
+ return attribute_names_;
+}
+const Value & UpdateLogicalOperator::getValues() const {
+	return values_;
+}

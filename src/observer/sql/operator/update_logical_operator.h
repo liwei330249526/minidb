@@ -29,8 +29,12 @@ public:
 		LogicalOperatorType type() const override { return LogicalOperatorType::UPDATE; }
 		Table              *table() const { return table_; }
 
+		string getAttributeNames();
+		const Value  & getValues() const;
 private:
 		Table *table_ = nullptr;
-		string   attribute_names_;  // 列名
+		string   attribute_names_;
+
+  // 列名
 		Value values_; // 设置的值
 };
