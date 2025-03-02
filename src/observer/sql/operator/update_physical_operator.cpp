@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 #include "storage/trx/trx.h"
 
+// 更新操作，物理算子
 RC UpdatePhysicalOperator::open(Trx *trx)
 {
 	if (children_.empty()) {
@@ -32,7 +33,7 @@ RC UpdatePhysicalOperator::open(Trx *trx)
 	}
 
 	trx_ = trx;
-
+  // 获取要 update 的所有记录
 	while (OB_SUCC(rc = child->next())) {
 		Tuple *tuple = child->current_tuple();
 		if (nullptr == tuple) {
@@ -49,8 +50,23 @@ RC UpdatePhysicalOperator::open(Trx *trx)
 
 	// 先收集记录再删除
 	// 记录的有效性由事务来保证，如果事务不保证删除的有效性，那说明此事务类型不支持并发控制，比如VacuousTrx
+	// 构造record
+	// 通过 attribuate_name_ 找到 filed； 将 value_ 数据插入指定位置; 然后写入存储
+	const FieldMeta *field = table_->table_meta().field(attribuate_name_.c_str());
+	if (nullptr == field) {
+		LOG_WARN("no such field in table: table %s, field %s", table_->name(), attribuate_name_.c_str());
+//		table = nullptr;
+		return RC::SCHEMA_FIELD_NOT_EXIST;
+	}
+
 	for (Record &record : records_) {
-		rc = trx_->delete_record(table_, record);
+		// 更新记录
+		Record newRecord;
+		newRecord.copy_data(record.data(), record.len());
+		newRecord.set_rid(record.rid());
+		newRecord.set_field(field->offset(), field->len(), const_cast<char *>(value_.data()));
+		// 写入记录
+		rc = trx_->update_record(table_, newRecord);
 		if (rc != RC::SUCCESS) {
 			LOG_WARN("failed to delete record: %s", strrc(rc));
 			return rc;

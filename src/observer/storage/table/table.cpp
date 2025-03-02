@@ -299,13 +299,13 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     LOG_WARN("Input values don't match the table's schema, table name:%s", table_meta_.name());
     return RC::SCHEMA_FIELD_MISSING;
   }
-
+  // 普通列，起始index
   const int normal_field_start_index = table_meta_.sys_field_num();
   // 复制所有字段的值
   int   record_size = table_meta_.record_size();
   char *record_data = (char *)malloc(record_size);
   memset(record_data, 0, record_size);
-
+  // value_num 个普通数据列
   for (int i = 0; i < value_num && OB_SUCC(rc); i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &    value = values[i];
@@ -515,6 +515,52 @@ RC Table::delete_record(const Record &record)
   // 再删除数据
   rc = record_handler_->delete_record(&record.rid());
   return rc;
+}
+
+
+RC Table::update_record(const RID &rid)
+{
+	RC     rc = RC::SUCCESS;
+	Record record;
+	rc = get_record(rid, record);
+	if (OB_FAIL(rc)) {
+		return rc;
+	}
+
+	return delete_record(record);
+}
+
+RC Table::update_record(const Record &record)
+{
+	RC rc = RC::SUCCESS;
+
+	// 删除索引
+	for (Index *index : indexes_) {
+		rc = index->delete_entry(record.data(), &record.rid());
+		ASSERT(RC::SUCCESS == rc,
+		       "failed to delete entry from index. table name=%s, index name=%s, rid=%s, rc=%s",
+		       name(), index->index_meta().name(), record.rid().to_string().c_str(), strrc(rc));
+	}
+
+	// 插入索引
+	rc = insert_entry_of_indexes(record.data(), record.rid());
+	if (rc != RC::SUCCESS) {  // 可能出现了键值重复
+		RC rc2 = delete_entry_of_indexes(record.data(), record.rid(), false /*error_on_not_exists*/);
+		if (rc2 != RC::SUCCESS) {
+			LOG_ERROR("Failed to rollback index data when insert index entries failed. table name=%s, rc=%d:%s",
+			          name(), rc2, strrc(rc2));
+		}
+		rc2 = record_handler_->delete_record(&record.rid());
+		if (rc2 != RC::SUCCESS) {
+			LOG_PANIC("Failed to rollback record data when insert index entries failed. table name=%s, rc=%d:%s",
+			          name(), rc2, strrc(rc2));
+		}
+	}
+
+	// 更新数据
+	rc = record_handler_->update_record(record);
+
+	return rc;
 }
 
 RC Table::insert_entry_of_indexes(const char *record, const RID &rid)

@@ -189,7 +189,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   if (RC::SUCCESS != sql_result->return_code() || !sql_result->has_operator()) {
     return write_state(event, need_disconnect);
   }
-
+  // 这里进去执行delete
   rc = sql_result->open();
   if (OB_FAIL(rc)) {
     sql_result->close();

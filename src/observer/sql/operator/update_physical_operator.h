@@ -41,8 +41,8 @@ public:
 
 private:
 		Table              *table_ = nullptr;
-		Trx                *trx_   = nullptr;
-		std::vector<Record> records_;
+		Trx                *trx_   = nullptr; // 事务
+		std::vector<Record> records_; // update 的所有记录, 查出来的所有记录
 		string attribuate_name_; // 列
 		Value value_; // 值
 };

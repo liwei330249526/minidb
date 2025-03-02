@@ -302,9 +302,9 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator & update_oper, uniqu
 //	oper = unique_ptr<PhysicalOperator>(new UpdatePhysicalOperator(update_oper.table(), update_oper.getAttributeNames(), update_oper.getValues()));
 		oper = unique_ptr<PhysicalOperator>(new UpdatePhysicalOperator(update_oper.table(), update_oper.getAttributeNames(),  update_oper.getValues()));
   // 将子物理计划加入到本 update 计划
-//	if (child_physical_oper) {
-//		oper->add_child(std::move(child_physical_oper));
-//	}
+	if (child_physical_oper) {
+		oper->add_child(std::move(child_physical_oper));
+	}
 	return rc;
 }
 

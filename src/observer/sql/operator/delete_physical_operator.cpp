@@ -32,7 +32,7 @@ RC DeletePhysicalOperator::open(Trx *trx)
   }
 
   trx_ = trx;
-
+  // 查出来要 delete 的记录
   while (OB_SUCC(rc = child->next())) {
     Tuple *tuple = child->current_tuple();
     if (nullptr == tuple) {

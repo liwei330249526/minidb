@@ -78,6 +78,8 @@ public:
   RC insert_record(Record &record);
   RC delete_record(const Record &record);
   RC delete_record(const RID &rid);
+	RC update_record(const Record &record);
+	RC update_record(const RID &rid);
   RC get_record(const RID &rid, Record &record);
 
   RC recover_insert_record(Record &record);
