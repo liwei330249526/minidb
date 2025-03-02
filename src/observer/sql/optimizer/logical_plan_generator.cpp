@@ -15,11 +15,13 @@ See the Mulan PSL v2 for more details. */
 #include "sql/optimizer/logical_plan_generator.h"
 
 #include <common/log/log.h>
+#include <src/observer/sql/stmt/update_stmt.h>
 
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/delete_logical_operator.h"
 #include "sql/operator/explain_logical_operator.h"
 #include "sql/operator/insert_logical_operator.h"
+#include "sql/operator/update_logical_operator.h"
 #include "sql/operator/join_logical_operator.h"
 #include "sql/operator/logical_operator.h"
 #include "sql/operator/predicate_logical_operator.h"
@@ -67,6 +69,13 @@ RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical
 
       rc = create_plan(delete_stmt, logical_operator);
     } break;
+
+	  case StmtType::UPDATE: {
+	  	// 增加逻辑计划 update
+		  UpdateStmt *update_stmt = static_cast<UpdateStmt *>(stmt);
+
+		  rc = create_plan(update_stmt, logical_operator);
+	  } break;
 
     case StmtType::EXPLAIN: {
       ExplainStmt *explain_stmt = static_cast<ExplainStmt *>(stmt);
@@ -146,7 +155,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   logical_operator = std::move(project_oper);
   return RC::SUCCESS;
 }
-
+// 建立filter 逻辑算子
 RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
   RC                                  rc = RC::SUCCESS;
@@ -362,4 +371,31 @@ RC LogicalPlanGenerator::create_group_by_plan(SelectStmt *select_stmt, unique_pt
                                                            std::move(aggregate_expressions));
   logical_operator = std::move(group_by_oper);
   return RC::SUCCESS;
+}
+// 生成 update 逻辑计划
+RC LogicalPlanGenerator::create_plan(UpdateStmt *update_stmt, unique_ptr<LogicalOperator> & logical_operator){
+	// 获取表，filter
+	Table                      *table       = update_stmt->table();
+	FilterStmt                 *filter_stmt = update_stmt->filter_stmt();
+	// get 操作
+	unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, ReadWriteMode::READ_WRITE));
+	// 谓词操作
+	unique_ptr<LogicalOperator> predicate_oper;
+
+	RC rc = create_plan(filter_stmt, predicate_oper);
+	if (rc != RC::SUCCESS) {
+		return rc;
+	}
+  // todo , set a = 3
+	unique_ptr<LogicalOperator> update_oper(new UpdateLogicalOperator(table, update_stmt->getAttributeName(), update_stmt->values()));
+  // delete(update) -- predicate -- get
+	if (predicate_oper) {
+		predicate_oper->add_child(std::move(table_get_oper));
+		update_oper->add_child(std::move(predicate_oper));
+	} else {
+		update_oper->add_child(std::move(table_get_oper));
+	}
+
+	logical_operator = std::move(update_oper);
+	return rc;
 }

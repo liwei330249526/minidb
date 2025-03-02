@@ -125,7 +125,7 @@ struct DeleteSqlNode
 };
 
 /**
- * @brief 描述一个update语句
+ * @brief 描述一个update语句， 比delete 多了两个字段
  * @ingroup SQLParser
  */
 struct UpdateSqlNode
@@ -133,7 +133,7 @@ struct UpdateSqlNode
   std::string                   relation_name;   ///< Relation to update
   std::string                   attribute_name;  ///< 更新的字段，仅支持一个字段
   Value                         value;           ///< 更新的值，仅支持一个字段
-  std::vector<ConditionSqlNode> conditions;
+  std::vector<ConditionSqlNode> conditions;      // where 条件
 };
 
 /**
