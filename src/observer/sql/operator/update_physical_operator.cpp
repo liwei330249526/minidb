@@ -64,7 +64,17 @@ RC UpdatePhysicalOperator::open(Trx *trx)
 		Record newRecord;
 		newRecord.copy_data(record.data(), record.len());
 		newRecord.set_rid(record.rid());
-		newRecord.set_field(field->offset(), field->len(), const_cast<char *>(value_.data()));
+
+		size_t       copy_len = field->len();
+		const size_t data_len = value_.length();
+		if (field->type() == AttrType::CHARS) {
+			// 如果record 空间该字段的空间大小更大， 则复制 value 数据长度+1
+			// 如果record 空间该字段的空间大小更小，则复制空间长度
+			if (copy_len > data_len) {
+				copy_len = data_len + 1;
+			}
+		}
+		newRecord.set_field(field->offset(), copy_len, const_cast<char *>(value_.data()));
 		// 写入记录
 		rc = trx_->update_record(table_, newRecord);
 		if (rc != RC::SUCCESS) {
