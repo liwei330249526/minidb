@@ -118,35 +118,80 @@ ComparisonExpr::ComparisonExpr(CompOp comp, unique_ptr<Expression> left, unique_
 
 ComparisonExpr::~ComparisonExpr() {}
 
+// 判断是否匹配
+bool isMatch(const std::string& leftStr, const std::string& rightStr) {
+	int m = leftStr.length();
+	int n = rightStr.length();
+
+	// 创建一个二维数组 dp 用于存储子问题的解, dp[i][j] 是前left前i个，right前j个是否匹配
+	std::vector<std::vector<bool>> dp(m + 1, std::vector<bool>(n + 1, false));
+
+	// 空字符串可以匹配空字符串
+	dp[0][0] = true;
+
+	// 处理 rightStr 以 '%' 开头的情况
+	for (int j = 1; j <= n; ++j) {
+		if (rightStr[j - 1] == '%') {
+			dp[0][j] = dp[0][j - 1];
+		}
+	}
+
+	// 填充 dp 数组
+	for (int i = 1; i <= m; ++i) {
+		for (int j = 1; j <= n; ++j) {
+			if (rightStr[j - 1] == '%') {
+				// '%' 可以匹配零个或多个字符
+				dp[i][j] = dp[i][j - 1] || dp[i - 1][j];
+			} else if (rightStr[j - 1] == '_' || leftStr[i - 1] == rightStr[j - 1]) {
+				// '_' 匹配一个任意字符，或者字符相等
+				dp[i][j] = dp[i - 1][j - 1];
+			}
+		}
+	}
+
+	return dp[m][n];
+}
+
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC  rc         = RC::SUCCESS;
   int cmp_result = left.compare(right);
   result         = false;
-  switch (comp_) {
-    case EQUAL_TO: {
-      result = (0 == cmp_result);
-    } break;
-    case LESS_EQUAL: {
-      result = (cmp_result <= 0);
-    } break;
-    case NOT_EQUAL: {
-      result = (cmp_result != 0);
-    } break;
-    case LESS_THAN: {
-      result = (cmp_result < 0);
-    } break;
-    case GREAT_EQUAL: {
-      result = (cmp_result >= 0);
-    } break;
-    case GREAT_THAN: {
-      result = (cmp_result > 0);
-    } break;
-    default: {
-      LOG_WARN("unsupported comparison. %d", comp_);
-      rc = RC::INTERNAL;
-    } break;
+
+  if (comp_ == LIKE_OP && left.attr_type() == AttrType::CHARS && right.attr_type() == AttrType::CHARS) {
+    if (isMatch(left.get_string(), right.get_string())) {
+       result = true;
+    } else {
+      result = false;
+    }
+  } else {
+	  switch (comp_) {
+		  case EQUAL_TO: {
+			  result = (0 == cmp_result);
+		  } break;
+		  case LESS_EQUAL: {
+			  result = (cmp_result <= 0);
+		  } break;
+		  case NOT_EQUAL: {
+			  result = (cmp_result != 0);
+		  } break;
+		  case LESS_THAN: {
+			  result = (cmp_result < 0);
+		  } break;
+		  case GREAT_EQUAL: {
+			  result = (cmp_result >= 0);
+		  } break;
+		  case GREAT_THAN: {
+			  result = (cmp_result > 0);
+		  } break;
+		  default: {
+			  LOG_WARN("unsupported comparison. %d", comp_);
+			  rc = RC::INTERNAL;
+		  } break;
+	  }
   }
+
+
 
   return rc;
 }
