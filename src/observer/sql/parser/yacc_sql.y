@@ -113,6 +113,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         LE
         GE
         NE
+        LIKE  // 添加 LIKE 词法单元
+        PERCENT  // 添加 % 词法单元
+        UNDERSCORE  // 添加 _ 词法单元
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -649,6 +652,17 @@ condition:
       delete $1;
       delete $3;
     }
+    | rel_attr LIKE value  // 添加 LIKE 条件规则
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 0;
+      $$->right_value = *$3;
+      $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
+      delete $1;
+      delete $3;
+    }
     ;
 
 comp_op:
@@ -658,6 +672,7 @@ comp_op:
     | LE { $$ = LESS_EQUAL; }
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
+    | LIKE { $$ = LIKE_OP; }
     ;
 
 // your code here
