@@ -114,6 +114,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         GE
         NE
         LIKE  // 添加 LIKE 词法单元
+        NOT   // 添加 NOT 词法单元
         PERCENT  // 添加 % 词法单元
         UNDERSCORE  // 添加 _ 词法单元
 
@@ -662,6 +663,17 @@ condition:
       $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
       delete $1;
       delete $3;
+    }
+    | rel_attr NOT LIKE value  // 添加 LIKE 条件规则
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 0;
+      $$->right_value = *$4;
+      $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
+      delete $1;
+      delete $4;
     }
     ;
 

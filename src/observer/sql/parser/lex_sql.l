@@ -121,6 +121,7 @@ BY                                      RETURN_TOKEN(BY);
 STORAGE                                 RETURN_TOKEN(STORAGE);
 FORMAT                                  RETURN_TOKEN(FORMAT);
 LIKE                                    RETURN_TOKEN(LIKE);  // 添加 LIKE 关键字识别
+NOT                                     RETURN_TOKEN(NOT);   // 添加 NOT 关键字识别
 %                                       RETURN_TOKEN(PERCENT);  // 添加 % 通配符识别
 _                                       RETURN_TOKEN(UNDERSCORE);  // 添加 _ 通配符识别
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);

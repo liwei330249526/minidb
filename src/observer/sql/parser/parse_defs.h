@@ -52,6 +52,7 @@ enum CompOp
   GREAT_EQUAL,  ///< ">="
   GREAT_THAN,   ///< ">"
   LIKE_OP,  // 添加 LIKE_OP 枚举值
+	NOT_LIKE_OP,  // NOT LIKE 操作
   NO_OP
 };
 
