@@ -158,11 +158,19 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
   int cmp_result = left.compare(right);
   result         = false;
 
-  if (comp_ == LIKE_OP && left.attr_type() == AttrType::CHARS && right.attr_type() == AttrType::CHARS) {
+  if ((comp_ == LIKE_OP || comp_ == NOT_LIKE_OP) && left.attr_type() == AttrType::CHARS && right.attr_type() == AttrType::CHARS) {
     if (isMatch(left.get_string(), right.get_string())) {
-       result = true;
+      if (comp_ == LIKE_OP) {
+		    result = true;
+      } else {
+		    result = false;
+      }
     } else {
-      result = false;
+      if (comp_ == LIKE_OP) {
+		    result = false;
+      } else {
+		    result = true;
+      }
     }
   } else {
 	  switch (comp_) {
