@@ -614,98 +614,97 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
+    |
+    expression LIKE expression
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 2;   // 右边是表达式
+      $$->right_expression = $3;
+      $$->comp = LIKE_OP;
+    }
+    |
+    expression NOT LIKE expression
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 2;   // 右边是表达式
+      $$->right_expression = $4;
+      $$->comp = NOT_LIKE_OP;
+    }
+//rel_attr comp_op value
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 1;
+// $$->left_attr = *$1;
+// $$->right_is_attr = 0;
+// $$->right_value = *$3;
+// $$->comp = $2;
+//
+// delete $1;
+// delete $3;
+//
+// value comp_op value
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 0;
+// $$->left_value = *$1;
+// $$->right_is_attr = 0;
+// $$->right_value = *$3;
+// $$->comp = $2;
+//
+// delete $1;
+// delete $3;
+//
+// rel_attr comp_op rel_attr
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 1;
+// $$->left_attr = *$1;
+// $$->right_is_attr = 1;
+// $$->right_attr = *$3;
+// $$->comp = $2;
+//
+// delete $1;
+// delete $3;
+//
+// value comp_op rel_attr
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 0;
+// $$->left_value = *$1;
+// $$->right_is_attr = 1;
+// $$->right_attr = *$3;
+// $$->comp = $2;
+//
+// delete $1;
+// delete $3;
+//
+// rel_attr LIKE value  // 添加 LIKE 条件规则
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 1;
+// $$->left_attr = *$1;
+// $$->right_is_attr = 0;
+// $$->right_value = *$3;
+// $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
+// delete $1;
+// delete $3;
+//
+// rel_attr NOT LIKE value  // 添加 LIKE 条件规则
+//
+// $$ = new ConditionSqlNode;
+// $$->left_is_attr = 1;
+// $$->left_attr = *$1;
+// $$->right_is_attr = 0;
+// $$->right_value = *$4;
+// $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
+// delete $1;
+// delete $4;
+//
     ;
-//    |
-//    expression LIKE expression
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 2;    // 左边是表达式
-//      $$->left_expression = $1;
-//      $$->right_is_attr = 2;   // 右边是表达式
-//      $$->right_expression = $3;
-//      $$->comp = LIKE_OP;
-//    }
-//    |
-//    expression NOT LIKE expression
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 2;    // 左边是表达式
-//      $$->left_expression = $1;
-//      $$->right_is_attr = 2;   // 右边是表达式
-//      $$->right_expression = $4;
-//      $$->comp = NOT_LIKE_OP;
-//    }
-//    rel_attr comp_op value
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | value comp_op value
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 0;
-//      $$->left_value = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr comp_op rel_attr
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 1;
-//      $$->right_attr = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | value comp_op rel_attr
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 0;
-//      $$->left_value = *$1;
-//      $$->right_is_attr = 1;
-//      $$->right_attr = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr LIKE value  // 添加 LIKE 条件规则
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr NOT LIKE value  // 添加 LIKE 条件规则
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$4;
-//      $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
-//      delete $1;
-//      delete $4;
-//    }
-//    ;
 
 comp_op:
       EQ { $$ = EQUAL_TO; }
@@ -715,7 +714,6 @@ comp_op:
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
-    | NOT LIKE { $$ = NOT_LIKE_OP; }
     ;
 
 // your code here

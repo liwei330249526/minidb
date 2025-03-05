@@ -140,7 +140,7 @@ _                                       RETURN_TOKEN(UNDERSCORE);  // 添加 _ �
 "+" |
 "-" |
 "*" |
-"/"                                     { return yytext[0]; }
+"/"                                     { return yytext[0]; } // 直接返回了字符
 \"[^"]*\"                               yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
 '[^']*\'                                yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
 

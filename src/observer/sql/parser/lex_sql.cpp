@@ -1342,7 +1342,7 @@ case 62:
 case 63:
 YY_RULE_SETUP
 #line 143 "lex_sql.l"
-{ return yytext[0]; }
+{ return yytext[0]; } // 直接返回了字符
 	YY_BREAK
 case 64:
 /* rule 64 can match eol */
