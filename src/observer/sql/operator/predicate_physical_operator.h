@@ -41,5 +41,5 @@ public:
   RC tuple_schema(TupleSchema &schema) const override;
 
 private:
-  std::unique_ptr<Expression> expression_;
+  std::unique_ptr<Expression> expression_; // 物理算子的 表达式
 };

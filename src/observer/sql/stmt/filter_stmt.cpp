@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2022/5/22.
 //
 
+#include <src/observer/sql/parser/expression_binder.h>
 #include "sql/stmt/filter_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
@@ -91,7 +92,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   filter_unit = new FilterUnit;
   // 左边是属性，即列名
-  if (condition.left_is_attr) {
+  if (condition.left_is_attr == 1) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
     rc                     = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
@@ -102,14 +103,33 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_left(filter_obj);
-  } else {
+  } else if (condition.left_is_attr == 0){
   	// 左边是值
     FilterObj filter_obj;
     filter_obj.init_value(condition.left_value);
     filter_unit->set_left(filter_obj);
+  } else if (condition.left_is_attr == 2) {
+  	// 左边是表达式
+	  FilterObj filter_obj;
+	  BinderContext binder_context;
+	  binder_context.add_table(default_table);
+	  // collect query fields in `select` statement
+	  vector<unique_ptr<Expression>> bound_expressions;
+	  ExpressionBinder expression_binder(binder_context);
+
+	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
+	  unique_ptr<Expression> left_expr(condition.left_expression);
+	  RC rc = expression_binder.bind_expression(left_expr, bound_expressions);
+	  if (OB_FAIL(rc)) {
+		  LOG_INFO("bind expression failed. rc=%s", strrc(rc));
+		  return rc;
+    }
+	  filter_obj.init_expression(std::move(bound_expressions.front()));
+
+	  filter_unit->set_left(filter_obj);
   }
-  // 右边是属性，即列名
-  if (condition.right_is_attr) {
+	// 右边是属性，即列名
+  if (condition.right_is_attr == 1) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
     rc                     = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
@@ -120,15 +140,34 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_right(filter_obj);
-  } else {
+  } else if (condition.right_is_attr == 0) {
   	// 右边是值
     FilterObj filter_obj;
     filter_obj.init_value(condition.right_value);
     filter_unit->set_right(filter_obj);
+  }  else if (condition.right_is_attr == 2){
+  	// 右边是表达式
+	  FilterObj filter_obj;
+
+	  // collect query fields in `select` statement
+	  BinderContext binder_context;
+	  binder_context.add_table(default_table);
+	  vector<unique_ptr<Expression>> bound_expressions;
+	  ExpressionBinder expression_binder(binder_context);
+	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
+	  unique_ptr<Expression> right_expr(condition.right_expression);
+	  RC rc = expression_binder.bind_expression(right_expr, bound_expressions);
+	  if (OB_FAIL(rc)) {
+		  LOG_INFO("bind expression failed. rc=%s", strrc(rc));
+		  return rc;
+	  }
+	  filter_obj.init_expression(std::move(bound_expressions.front()));
+	  filter_unit->set_right(filter_obj);
   }
-  // 设置操作符
+	// 设置操作符
   filter_unit->set_comp(comp);
 
   // 检查两个类型是否能够比较
   return rc;
 }
+

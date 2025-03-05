@@ -41,6 +41,6 @@ public:
   RC tuple_schema(TupleSchema &schema) const override;
 
 private:
-  std::vector<std::unique_ptr<Expression>>     expressions_;
-  ExpressionTuple<std::unique_ptr<Expression>> tuple_;
+  std::vector<std::unique_ptr<Expression>>     expressions_;  // 投影算子的表达式，例如 select id+1 from exp_table;   id+1; left 是 filed ， right 是valu
+  ExpressionTuple<std::unique_ptr<Expression>> tuple_; // 投影算子的 tuple
 };

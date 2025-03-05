@@ -24,26 +24,59 @@ class Db;
 class Table;
 class FieldMeta;
 // filter 对象， 字段， 值
+// 当结构体中有一个 std::unique_ptr 指针，将一个结构体变量赋值给另一个结构体变量时，默认情况下会出现编译错误，因为 std::unique_ptr 具有独占所有权的特性，
+// 其拷贝构造函数和拷贝赋值运算符被显式删除，不允许直接进行拷贝操作。不过，可以通过移动语义来转移 std::unique_ptr 的所有权。
 struct FilterObj
 {
-		// 是属性；
-  bool  is_attr;
+		// 是属性 1 ； 是值 0；或算数表达式 2
+  int  is_attr;
   //  字段；
   Field field;
   //  值
   Value value;
+  // 表达式
+  unique_ptr<Expression> expression;  // 很可能是 ArithmeticExpr
 
   void init_attr(const Field &field)
   {
-    is_attr     = true;
+    is_attr     = 1;
     this->field = field;
   }
 
   void init_value(const Value &value)
   {
-    is_attr     = false;
+    is_attr     = 0;
     this->value = value;
   }
+
+  void init_expression(unique_ptr<Expression> left_expression)
+  {
+    is_attr     = 2;
+    this->expression = std::move(left_expression);
+  }
+
+  FilterObj() = default;
+		// 移动赋值运算符
+	FilterObj& operator=(FilterObj&& other) noexcept {
+		if (this != &other) {
+			is_attr = other.is_attr;
+			field = std::move(other.field);
+			value = std::move(other.value);
+			expression = std::move(other.expression);
+		}
+		return *this;
+	}
+
+//	FilterObj& operator=(FilterObj& other)  {
+//		if (this != &other) {
+//			is_attr = other.is_attr;
+//			field = std::move(other.field);
+//			value = std::move(other.value);
+//			expression = std::move(other.expression);
+//		}
+//		return *this;
+//	}
+
 };
 // filter 单元
 class FilterUnit
@@ -56,11 +89,11 @@ public:
 
   CompOp comp() const { return comp_; }
 
-  void set_left(const FilterObj &obj) { left_ = obj; }
-  void set_right(const FilterObj &obj) { right_ = obj; }
+  void set_left(FilterObj &obj) { left_ = std::move(obj); }
+  void set_right(FilterObj &obj) { right_ = std::move(obj); }
 
-  const FilterObj &left() const { return left_; }
-  const FilterObj &right() const { return right_; }
+   FilterObj &left()  { return left_; }
+   FilterObj &right()  { return right_; }
 
 private:
 		// 操作符，左边对象，右边对象

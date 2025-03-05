@@ -47,7 +47,7 @@ RC PredicatePhysicalOperator::next()
     }
 
     Value value;
-    rc = expression_->get_value(*tuple, value);
+    rc = expression_->get_value(*tuple, value); // 物理算子，执行的时候，表达式计算，获取值
     if (rc != RC::SUCCESS) {
       return rc;
     }

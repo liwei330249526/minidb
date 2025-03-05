@@ -200,7 +200,7 @@ public:
     FieldExpr       *field_expr = speces_[index];
     const FieldMeta *field_meta = field_expr->field().meta();
     cell.set_type(field_meta->type());
-    cell.set_data(this->record_->data() + field_meta->offset(), field_meta->len());
+    cell.set_data(this->record_->data() + field_meta->offset(), field_meta->len()); // 最终从 record_ 中取数据 ，例如第1列数据，id, offset = 0, len = 4
     return RC::SUCCESS;
   }
 
@@ -246,7 +246,7 @@ public:
   const Record &record() const { return *record_; }
 
 private:
-  Record                  *record_ = nullptr;
+  Record                  *record_ = nullptr; // 一行数据
   const Table             *table_  = nullptr;
   std::vector<FieldExpr *> speces_;
 };

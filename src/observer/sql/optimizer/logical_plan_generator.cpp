@@ -161,17 +161,36 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
   RC                                  rc = RC::SUCCESS;
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *>    &filter_units = filter_stmt->filter_units();
-  for (const FilterUnit *filter_unit : filter_units) {
-    const FilterObj &filter_obj_left  = filter_unit->left();
-    const FilterObj &filter_obj_right = filter_unit->right();
+  for (FilterUnit *filter_unit : filter_units) {
+     FilterObj &filter_obj_left  = filter_unit->left();
+     FilterObj &filter_obj_right = filter_unit->right();
 
-    unique_ptr<Expression> left(filter_obj_left.is_attr
-                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
-                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+    // 左边是列，或值， 或算数表达式,
+	  unique_ptr<Expression> left;
+	  if (filter_obj_left.is_attr == 0) {
+      left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+	  } else if (filter_obj_left.is_attr == 1) {
+		  left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
+	  } else if (filter_obj_left.is_attr == 2) {
+			left = std::move(filter_obj_left.expression) ;
+	  }
 
-    unique_ptr<Expression> right(filter_obj_right.is_attr
-                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
-                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+	  unique_ptr<Expression> right;
+	  if (filter_obj_right.is_attr == 0) {
+		  right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+	  } else if (filter_obj_right.is_attr == 1) {
+		  right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
+	  } else if (filter_obj_right.is_attr == 2) {
+		  right = std::move(filter_obj_right.expression);
+	  }
+
+//    unique_ptr<Expression> left(filter_obj_left.is_attr
+//                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
+//                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+//    // 右边是列，或值， 或算数表达式
+//    unique_ptr<Expression> right(filter_obj_right.is_attr
+//                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
+//                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
     // 如果left 和right 的类型不相等，则满足需要； 即例如 age>10, 即左边是列名，右边是值
     if (left->value_type() != right->value_type()) {
     	// 计算 left 转换为 right 类型的cost； 和right 转换为 left 类型的cost
@@ -192,10 +211,10 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
             return rc;
           }
           // 根据转换后的值构造 ValueExpr
-          left = make_unique<ValueExpr>(left_val);
+          left = make_unique<ValueExpr>(left_val); // C++ 引入了右值引用和移动语义，使得可以高效地处理临时对象的资源转移。当使用右值进行赋值操作时，会优先调用移动赋值运算符，避免了不必要的复制操作，提高了性能。
         } else {
         	// 如果左边是列明，则直接赋值转换表达式
-          left = std::move(cast_expr);
+          left = std::move(cast_expr);  // 。通过 std::move 函数，能够将一个左值转换为右值引用，从而触发 std::unique_ptr 的移动赋值运算符。
         }
       } else if (right_to_left_cost < left_to_right_cost && right_to_left_cost != INT32_MAX) {
         ExprType right_type = right->type();

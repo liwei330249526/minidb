@@ -38,7 +38,7 @@ public:
     }
 
     const ExprPointerType &expression = expressions_[index];
-    return get_value(expression, cell);
+    return get_value(expression, cell); // 最终调用到 getValue 后去表达式的值
   }
 
   RC spec_at(int index, TupleCellSpec &spec) const override
@@ -77,7 +77,7 @@ private:
   RC get_value(const ExprPointerType &expression, Value &value) const
   {
     RC rc = RC::SUCCESS;
-    if (child_tuple_ != nullptr) {
+    if (child_tuple_ != nullptr) { // 表达式， 和scan 的一行数据， get value
       rc = expression->get_value(*child_tuple_, value);
     } else {
       rc = expression->try_get_value(value);
@@ -86,6 +86,6 @@ private:
   }
 
 private:
-  const std::vector<ExprPointerType> &expressions_;
-  const Tuple                        *child_tuple_ = nullptr;
+  const std::vector<ExprPointerType> &expressions_; // 表达式
+  const Tuple                        *child_tuple_ = nullptr;  // 一行数据的tuple
 };

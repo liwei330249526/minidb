@@ -274,7 +274,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
 {
   RC rc = RC::SUCCESS;
   Tuple *tuple = nullptr;
-  while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
+  while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {  // 可以是 ExpressionTuple
     assert(tuple != nullptr);
 
     int cell_num = tuple->cell_num();

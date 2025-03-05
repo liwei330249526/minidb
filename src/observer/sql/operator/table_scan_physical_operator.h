@@ -53,6 +53,6 @@ private:
   ReadWriteMode                            mode_  = ReadWriteMode::READ_WRITE;
   RecordFileScanner                        record_scanner_;
   Record                                   current_record_;
-  RowTuple                                 tuple_;
+  RowTuple                                 tuple_; // 行 tuple
   std::vector<std::unique_ptr<Expression>> predicates_;  // TODO chang predicate to table tuple filter
 };

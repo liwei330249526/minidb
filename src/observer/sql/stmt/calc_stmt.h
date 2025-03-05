@@ -39,7 +39,7 @@ public:
   static RC create(CalcSqlNode &calc_sql, Stmt *&stmt)
   {
     CalcStmt *calc_stmt     = new CalcStmt();
-    calc_stmt->expressions_ = std::move(calc_sql.expressions);
+    calc_stmt->expressions_ = std::move(calc_sql.expressions); // 将vector 表达式转移到stmt
     stmt                    = calc_stmt;
     return RC::SUCCESS;
   }
@@ -48,5 +48,5 @@ public:
   std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
 
 private:
-  std::vector<std::unique_ptr<Expression>> expressions_;
+  std::vector<std::unique_ptr<Expression>> expressions_; // 表达式
 };

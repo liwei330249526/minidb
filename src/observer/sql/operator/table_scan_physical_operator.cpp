@@ -27,7 +27,7 @@ RC TableScanPhysicalOperator::open(Trx *trx)
   trx_ = trx;
   return rc;
 }
-
+// 例如 select id+1 from exp_table;
 RC TableScanPhysicalOperator::next()
 {
   RC rc = RC::SUCCESS;
@@ -35,7 +35,7 @@ RC TableScanPhysicalOperator::next()
   bool filter_result = false;
   while (OB_SUCC(rc = record_scanner_.next(current_record_))) {
     LOG_TRACE("got a record. rid=%s", current_record_.rid().to_string().c_str());
-    
+    // 获取一行数据
     tuple_.set_record(&current_record_);
     rc = filter(tuple_, filter_result);
     if (rc != RC::SUCCESS) {
@@ -57,7 +57,7 @@ RC TableScanPhysicalOperator::close() { return record_scanner_.close_scan(); }
 
 Tuple *TableScanPhysicalOperator::current_tuple()
 {
-  tuple_.set_record(&current_record_);
+  tuple_.set_record(&current_record_); // 这一行数据
   return &tuple_;
 }
 
