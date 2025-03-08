@@ -75,3 +75,25 @@ RC IntegerType::to_string(const Value &val, string &result) const
   result = ss.str();
   return RC::SUCCESS;
 }
+int IntegerType::cast_cost(AttrType type){
+	if (type == AttrType::INTS) {
+		// from 和 to 相等，则等于cost 为0
+		return 0;
+	} else if(type == AttrType::FLOATS) {
+		// 如果 cost 值较小，则可以转换，  int 可转换为 float
+		return 1;
+	}
+
+	return INT32_MAX;
+}
+RC IntegerType::cast_to(const Value & val, AttrType type, Value & result) const{
+	switch (type) {
+		case AttrType::FLOATS :
+		{
+			result.set_float(val.get_int());
+		}break;
+
+		default: return RC::UNIMPLEMENTED;
+	}
+	return RC::SUCCESS;
+}

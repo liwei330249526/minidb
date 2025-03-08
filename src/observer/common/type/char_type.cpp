@@ -49,6 +49,7 @@ RC CharType::cast_to(const Value &val, AttrType type, Value &result) const
 int CharType::cast_cost(AttrType type)
 {
   if (type == AttrType::CHARS) {
+  	// from 和 to 相等，则等于cost 为0
     return 0;
   } else if(type == AttrType::DATES) {
   	// 如果 cost 值较小，则可以转换
