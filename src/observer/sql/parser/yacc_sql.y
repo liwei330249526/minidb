@@ -519,9 +519,9 @@ expression:
     }
     | LBRACE expression RBRACE {
       $$ = $2;
-      $$->set_name(token_name(sql_string, &@$));
+      $$->set_name(token_name(sql_string, &@$)); // @$ 是 Yacc/Bison 中的一个特殊变量，它是一个 YYLTYPE 类型的结构体，用于存储当前规则匹配部分的位置信息，包括起始行、起始列、结束行和结束列。&@$ 表示取这个结构体的地址，将其作为参数传递给 token_name 函数，以便函数能知道具体的位置范围
     }
-    | '-' expression %prec UMINUS {
+    | '-' expression %prec UMINUS {  // %prec UMINUS：%prec 是 Yacc/Bison 中的一个特殊指令，用于指定当前规则的优先级。UMINUS 是之前在文件中通过 %nonassoc UMINUS 或类似声明定义的一个优先级标记，通常表示一元负号运算符的优先级。使用 %prec UMINUS 可以确保这个一元负号表达式的优先级与其他运算符的优先级正确匹配，避免出现运算顺序错误。
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
     }
     | value {
