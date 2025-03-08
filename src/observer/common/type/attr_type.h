@@ -23,7 +23,9 @@ enum class AttrType
   FLOATS,    ///< 浮点数类型(4字节)
   VECTORS,   ///< 向量类型
   BOOLEANS,  ///< boolean类型，当前不是由parser解析出来的，是程序内部使用的
+	NULLTYPE,   ///< null type
   MAXTYPE,   ///< 请在 UNDEFINED 与 MAXTYPE 之间增加新类型
+
 
 };
 

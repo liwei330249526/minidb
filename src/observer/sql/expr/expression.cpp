@@ -155,6 +155,12 @@ bool isMatch(const std::string& leftStr, const std::string& rightStr) {
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC  rc         = RC::SUCCESS;
+	// 相等于 null 类型， 直接返回false， case :  select * from exp_table where 7/0 > 2;  filter 永远返回false
+	if (left.attr_type() == AttrType::UNDEFINED || right.attr_type() == AttrType::UNDEFINED) {
+		result =  false;
+		return rc;
+	}
+
   int cmp_result = left.compare(right);
   result         = false;
 
