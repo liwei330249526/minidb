@@ -101,6 +101,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         AND
         SET
         ON
+        JOIN   // join
         LOAD
         DATA
         INFILE
@@ -119,7 +120,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         UNDERSCORE  // 添加 _ 词法单元
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
-%union {
+%union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
   Value *                                    value;
@@ -129,6 +130,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   AttrInfoSqlNode *                          attr_info;
   Expression *                               expression;
   std::vector<std::unique_ptr<Expression>> * expression_list;
+  JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
+  std::vector<JoinRelationNode>              join_node_list; // join 链表
   std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
@@ -143,7 +146,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %token <string> ID
 %token <string> SSS
 //非终结符
-
+// %type 用于指定非终结符（non-terminal）或终结符（terminal）的语义值类型。它告诉 Yacc/Bison，某个符号的语义值应该使用 %union 中的哪个成员类型。%type <member> symbol;  <member>：%union 中定义的成员名称。symbol：非终结符或终结符的名称。
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
 %type <number>              type
 %type <condition>           condition
@@ -164,6 +167,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <expression_list>     group_by
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
+%type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
+%type <join_node_list>      join_list      // join 链表
+
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -455,30 +461,99 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT expression_list FROM rel_list where group_by
+//    SELECT expression_list FROM rel_list where group_by
+//    {
+//      $$ = new ParsedSqlNode(SCF_SELECT);
+//      if ($2 != nullptr) {
+//        $$->selection.expressions.swap(*$2);
+//        delete $2;
+//      }
+//
+//      if ($4 != nullptr) {
+//        $$->selection.relations.swap(*$4);
+//        delete $4;
+//      }
+//
+//      if ($5 != nullptr) {
+//        $$->selection.conditions.swap(*$5);
+//        delete $5;
+//      }
+//
+//      if ($6 != nullptr) {
+//        $$->selection.group_by.swap(*$6);
+//        delete $6;
+//      }
+//    }
+//   | 
+    SELECT expression_list FROM rel_list join_list where group_by
     {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-      if ($2 != nullptr) {
-        $$->selection.expressions.swap(*$2);
-        delete $2;
-      }
+     // 支持 join
+     $$ = new ParsedSqlNode(SCF_SELECT);
+     if ($2 != nullptr) {
+       $$->selection.expressions.swap(*$2);  // expression 表达式
+       delete $2;
+     }
 
+     // 添加主表
       if ($4 != nullptr) {
         $$->selection.relations.swap(*$4);
         delete $4;
       }
 
-      if ($5 != nullptr) {
-        $$->selection.conditions.swap(*$5);
-        delete $5;
-      }
+     // 处理 JOIN 表
+     if ($5 != nullptr) {
+       for (const auto &join_relation : *$5) {
+         $$->selection.relations.push_back(join_relation.right_table);  // join 表
+         $$->selection.join_relations.push_back(join_relation); // join 表达式
+       }
+       delete $5;
+     }
 
-      if ($6 != nullptr) {
-        $$->selection.group_by.swap(*$6);
-        delete $6;
+     // 处理 WHERE 条件
+     if ($6 != nullptr) {
+       $$->selection.conditions.swap(*$6);
+       delete $6;
+     }
+
+     // 处理 GROUP BY
+     if ($7 != nullptr) {
+       $$->selection.group_by.swap(*$7);
+       delete $7;
+     }
+   }
+    ;
+
+join_list:
+    /* empty */  // 空规则， null
+    {
+      $$ = nullptr;
+    }
+    | join_relation join_list   // 递归，多表join
+    {
+      if ($2 != nullptr) {  // 2 不为空，则将2赋值；
+        $$ = $2;
+      } else {
+        $$ = new std::vector<JoinRelationNode>(); // 2 为空，则创建空的Vector
       }
+      $$->push_back(*$1);
+      delete $1
     }
     ;
+
+join_relation:  // 一个join 表达式
+    JOIN relation ON condition_list
+    {
+      $$ = new JoinRelationNode();
+      $$.left_table = "";  // 左表名由上层规则提供
+      $$.right_table = $2; // join 的右表
+      if ($4 != nullptr) {
+        $$.conditions.swap(*$4);  // 条件列表
+        delete $4;
+      }
+      free($2);
+    }
+    ;
+
 calc_stmt:
     CALC expression_list
     {
@@ -556,12 +631,12 @@ rel_attr:
     }
     ;
 
-relation:
+relation: // 表
     ID {
       $$ = $1;
     }
     ;
-rel_list:
+rel_list:       // 用于表示 表名列表; rel_list 是一个非终结符，表示一个或多个表名（关系名）; 在 SQL 查询中，FROM 子句后面可以跟一个表名，也可以跟多个表名（用逗号分隔）
     relation {
       $$ = new std::vector<std::string>();
       $$->push_back($1);

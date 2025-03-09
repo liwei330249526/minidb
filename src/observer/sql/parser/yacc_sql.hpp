@@ -91,27 +91,28 @@ extern int yydebug;
     AND = 292,                     /* AND  */
     SET = 293,                     /* SET  */
     ON = 294,                      /* ON  */
-    LOAD = 295,                    /* LOAD  */
-    DATA = 296,                    /* DATA  */
-    INFILE = 297,                  /* INFILE  */
-    EXPLAIN = 298,                 /* EXPLAIN  */
-    STORAGE = 299,                 /* STORAGE  */
-    FORMAT = 300,                  /* FORMAT  */
-    EQ = 301,                      /* EQ  */
-    LT = 302,                      /* LT  */
-    GT = 303,                      /* GT  */
-    LE = 304,                      /* LE  */
-    GE = 305,                      /* GE  */
-    NE = 306,                      /* NE  */
-    LIKE = 307,                    /* LIKE  */
-    NOT = 308,                     /* NOT  */
-    PERCENT = 309,                 /* PERCENT  */
-    UNDERSCORE = 310,              /* UNDERSCORE  */
-    NUMBER = 311,                  /* NUMBER  */
-    FLOAT = 312,                   /* FLOAT  */
-    ID = 313,                      /* ID  */
-    SSS = 314,                     /* SSS  */
-    UMINUS = 315                   /* UMINUS  */
+    JOIN = 295,                    /* JOIN  */
+    LOAD = 296,                    /* LOAD  */
+    DATA = 297,                    /* DATA  */
+    INFILE = 298,                  /* INFILE  */
+    EXPLAIN = 299,                 /* EXPLAIN  */
+    STORAGE = 300,                 /* STORAGE  */
+    FORMAT = 301,                  /* FORMAT  */
+    EQ = 302,                      /* EQ  */
+    LT = 303,                      /* LT  */
+    GT = 304,                      /* GT  */
+    LE = 305,                      /* LE  */
+    GE = 306,                      /* GE  */
+    NE = 307,                      /* NE  */
+    LIKE = 308,                    /* LIKE  */
+    NOT = 309,                     /* NOT  */
+    PERCENT = 310,                 /* PERCENT  */
+    UNDERSCORE = 311,              /* UNDERSCORE  */
+    NUMBER = 312,                  /* NUMBER  */
+    FLOAT = 313,                   /* FLOAT  */
+    ID = 314,                      /* ID  */
+    SSS = 315,                     /* SSS  */
+    UMINUS = 316                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -120,8 +121,8 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 122 "yacc_sql.y"
-
+#line 123 "yacc_sql.y"
+   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
   Value *                                    value;
@@ -131,6 +132,8 @@ union YYSTYPE
   AttrInfoSqlNode *                          attr_info;
   Expression *                               expression;
   std::vector<std::unique_ptr<Expression>> * expression_list;
+  JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
+  std::vector<JoinRelationNode>              join_node_list; // join 链表
   std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
@@ -139,7 +142,7 @@ union YYSTYPE
   int                                        number;
   float                                      floats;
 
-#line 143 "yacc_sql.hpp"
+#line 146 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

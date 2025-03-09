@@ -82,6 +82,13 @@ struct ConditionSqlNode
   Value          right_value;    ///< right-hand side value if right_is_attr = FALSE
 };
 
+// 表示一个join 关系
+struct JoinRelationNode {
+		std::string left_table;                // 左表名
+		std::string right_table;               // 右表名
+		std::vector<ConditionSqlNode> conditions;  // JOIN 条件
+};
+
 /**
  * @brief 描述一个select语句
  * @ingroup SQLParser
@@ -97,6 +104,7 @@ struct SelectSqlNode
 {
   std::vector<std::unique_ptr<Expression>> expressions;  ///< 查询的表达式
   std::vector<std::string>                 relations;    ///< 查询的表
+  std::vector<JoinRelationNode>            join_relations; // join 表达式   如果有join， 则relations作为主表，只有1个
   std::vector<ConditionSqlNode>            conditions;   ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<Expression>> group_by;     ///< group by clause
 };
@@ -256,6 +264,8 @@ struct ErrorSqlNode
   int         line;
   int         column;
 };
+
+
 
 /**
  * @brief 表示一个SQL语句的类型
