@@ -377,10 +377,20 @@ AttrType ArithmeticExpr::value_type() const
 RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value, Value &value) const
 {
   RC rc = RC::SUCCESS;
-  if (left_value.attr_type() == AttrType::UNDEFINED || right_value .attr_type() == AttrType::UNDEFINED) {
-  	value.reset();
-  	return rc;
+  // 单目，只判断左边，如果是 null， 则返回null
+  if (arithmetic_type_ == Type::NEGATIVE) {
+	  if (left_value.attr_type() == AttrType::UNDEFINED) {
+		  value.reset();
+	    return rc;
+	  }
+  } else {
+    // 双目， 判断左右，如果有null， 则返回null
+	  if (left_value.attr_type() == AttrType::UNDEFINED || right_value .attr_type() == AttrType::UNDEFINED) {
+		  value.reset();
+      return rc;
+	  }
   }
+
 
   const AttrType target_type = value_type();
   value.set_type(target_type);
