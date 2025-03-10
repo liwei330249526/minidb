@@ -101,6 +101,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         AND
         SET
         ON
+        INNER   // 声明了词法单元
         JOIN   // join
         LOAD
         DATA
@@ -131,7 +132,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   Expression *                               expression;
   std::vector<std::unique_ptr<Expression>> * expression_list;
   JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
-  std::vector<JoinRelationNode>              join_node_list; // join 链表
+  std::vector<JoinRelationNode> *            join_node_list; // join 链表
   std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
@@ -535,22 +536,22 @@ join_list:
       } else {
         $$ = new std::vector<JoinRelationNode>(); // 2 为空，则创建空的Vector
       }
-      $$->push_back(*$1);
-      delete $1
+      $$->emplace_back(*$1);
+      delete $1;
     }
     ;
 
 join_relation:  // 一个join 表达式
-    JOIN relation ON condition_list
+    INNER JOIN relation ON condition_list
     {
       $$ = new JoinRelationNode();
-      $$.left_table = "";  // 左表名由上层规则提供
-      $$.right_table = $2; // join 的右表
-      if ($4 != nullptr) {
-        $$.conditions.swap(*$4);  // 条件列表
-        delete $4;
+      $$->left_table = "";  // 左表名由上层规则提供
+      $$->right_table = $3; // join 的右表
+      if ($5 != nullptr) {
+        $$->conditions.swap(*$5);  // 条件列表
+        delete $5;
       }
-      free($2);
+      free($3);
     }
     ;
 
