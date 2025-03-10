@@ -101,6 +101,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         AND
         SET
         ON
+        INNER   // 声明了词法单元
+        JOIN   // join
+        COUNT  // count
         LOAD
         DATA
         INFILE
@@ -119,7 +122,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         UNDERSCORE  // 添加 _ 词法单元
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
-%union {
+%union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
   Value *                                    value;
@@ -129,6 +132,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   AttrInfoSqlNode *                          attr_info;
   Expression *                               expression;
   std::vector<std::unique_ptr<Expression>> * expression_list;
+  JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
+  std::vector<JoinRelationNode> *            join_node_list; // join 链表
   std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
@@ -143,7 +148,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %token <string> ID
 %token <string> SSS
 //非终结符
-
+// %type 用于指定非终结符（non-terminal）或终结符（terminal）的语义值类型。它告诉 Yacc/Bison，某个符号的语义值应该使用 %union 中的哪个成员类型。%type <member> symbol;  <member>：%union 中定义的成员名称。symbol：非终结符或终结符的名称。
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
 %type <number>              type
 %type <condition>           condition
@@ -164,6 +169,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <expression_list>     group_by
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
+%type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
+%type <join_node_list>      join_list      // join 链表
+
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -221,7 +229,7 @@ command_wrapper:
   | exit_stmt
     ;
 
-exit_stmt:      
+exit_stmt:
     EXIT {
       (void)yynerrs;  // 这么写为了消除yynerrs未使用的告警。如果你有更好的方法欢迎提PR
       $$ = new ParsedSqlNode(SCF_EXIT);
@@ -340,9 +348,9 @@ attr_def_list:
       delete $2;
     }
     ;
-    
+
 attr_def:
-    ID type LBRACE number RBRACE 
+    ID type LBRACE number RBRACE
     {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
@@ -370,7 +378,7 @@ type:
     | VECTOR_T { $$ = static_cast<int>(AttrType::VECTORS); }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
-    INSERT INTO ID VALUES LBRACE value value_list RBRACE 
+    INSERT INTO ID VALUES LBRACE value value_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_INSERT);
       $$->insertion.relation_name = $3;
@@ -390,7 +398,7 @@ value_list:
     {
       $$ = nullptr;
     }
-    | COMMA value value_list  { 
+    | COMMA value value_list  {
       if ($3 != nullptr) {
         $$ = $3;
       } else {
@@ -426,9 +434,9 @@ storage_format:
       $$ = $4;
     }
     ;
-    
+
 delete_stmt:    /*  delete 语句的语法解析树*/
-    DELETE FROM ID where 
+    DELETE FROM ID where
     {
       $$ = new ParsedSqlNode(SCF_DELETE);
       $$->deletion.relation_name = $3;
@@ -440,7 +448,7 @@ delete_stmt:    /*  delete 语句的语法解析树*/
     }
     ;
 update_stmt:      /*  update 语句的语法解析树*/
-    UPDATE ID SET ID EQ value where 
+    UPDATE ID SET ID EQ value where
     {
       $$ = new ParsedSqlNode(SCF_UPDATE);
       $$->update.relation_name = $2;
@@ -455,30 +463,99 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT expression_list FROM rel_list where group_by
+//    SELECT expression_list FROM rel_list where group_by
+//    {
+//      $$ = new ParsedSqlNode(SCF_SELECT);
+//      if ($2 != nullptr) {
+//        $$->selection.expressions.swap(*$2);
+//        delete $2;
+//      }
+//
+//      if ($4 != nullptr) {
+//        $$->selection.relations.swap(*$4);
+//        delete $4;
+//      }
+//
+//      if ($5 != nullptr) {
+//        $$->selection.conditions.swap(*$5);
+//        delete $5;
+//      }
+//
+//      if ($6 != nullptr) {
+//        $$->selection.group_by.swap(*$6);
+//        delete $6;
+//      }
+//    }
+//   |
+    SELECT expression_list FROM rel_list join_list where group_by
     {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-      if ($2 != nullptr) {
-        $$->selection.expressions.swap(*$2);
-        delete $2;
-      }
+     // 支持 join
+     $$ = new ParsedSqlNode(SCF_SELECT);
+     if ($2 != nullptr) {
+       $$->selection.expressions.swap(*$2);  // expression 表达式
+       delete $2;
+     }
 
+     // 添加主表
       if ($4 != nullptr) {
         $$->selection.relations.swap(*$4);
         delete $4;
       }
 
-      if ($5 != nullptr) {
-        $$->selection.conditions.swap(*$5);
-        delete $5;
-      }
+     // 处理 JOIN 表
+     if ($5 != nullptr) {
+       for (const auto &join_relation : *$5) {
+         $$->selection.relations.push_back(join_relation.right_table);  // join 表
+         $$->selection.join_relations.push_back(join_relation); // join 表达式
+       }
+       delete $5;
+     }
 
-      if ($6 != nullptr) {
-        $$->selection.group_by.swap(*$6);
-        delete $6;
+     // 处理 WHERE 条件
+     if ($6 != nullptr) {
+       $$->selection.conditions.swap(*$6);
+       delete $6;
+     }
+
+     // 处理 GROUP BY
+     if ($7 != nullptr) {
+       $$->selection.group_by.swap(*$7);
+       delete $7;
+     }
+   }
+    ;
+
+join_list:
+    /* empty */  // 空规则， null
+    {
+      $$ = nullptr;
+    }
+    | join_relation join_list   // 递归，多表join
+    {
+      if ($2 != nullptr) {  // 2 不为空，则将2赋值；
+        $$ = $2;
+      } else {
+        $$ = new std::vector<JoinRelationNode>(); // 2 为空，则创建空的Vector
       }
+      $$->emplace_back(*$1);
+      delete $1;
     }
     ;
+
+join_relation:  // 一个join 表达式
+    INNER JOIN relation ON condition_list
+    {
+      $$ = new JoinRelationNode();
+      $$->left_table = "";  // 左表名由上层规则提供
+      $$->right_table = $3; // join 的右表
+      if ($5 != nullptr) {
+        $$->conditions.swap(*$5);  // 条件列表
+        delete $5;
+      }
+      free($3);
+    }
+    ;
+
 calc_stmt:
     CALC expression_list
     {
@@ -519,9 +596,9 @@ expression:
     }
     | LBRACE expression RBRACE {
       $$ = $2;
-      $$->set_name(token_name(sql_string, &@$));
+      $$->set_name(token_name(sql_string, &@$)); // @$ 是 Yacc/Bison 中的一个特殊变量，它是一个 YYLTYPE 类型的结构体，用于存储当前规则匹配部分的位置信息，包括起始行、起始列、结束行和结束列。&@$ 表示取这个结构体的地址，将其作为参数传递给 token_name 函数，以便函数能知道具体的位置范围
     }
-    | '-' expression %prec UMINUS {
+    | '-' expression %prec UMINUS {  // %prec UMINUS：%prec 是 Yacc/Bison 中的一个特殊指令，用于指定当前规则的优先级。UMINUS 是之前在文件中通过 %nonassoc UMINUS 或类似声明定义的一个优先级标记，通常表示一元负号运算符的优先级。使用 %prec UMINUS 可以确保这个一元负号表达式的优先级与其他运算符的优先级正确匹配，避免出现运算顺序错误。
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
     }
     | value {
@@ -537,6 +614,9 @@ expression:
     }
     | '*' {
       $$ = new StarExpr();
+    }
+    | COUNT expression {
+      $$ = create_aggregate_expression("count", $2, sql_string, &@$);
     }
     // your code here
     ;
@@ -556,12 +636,12 @@ rel_attr:
     }
     ;
 
-relation:
+relation: // 表
     ID {
       $$ = $1;
     }
     ;
-rel_list:
+rel_list:       // 用于表示 表名列表; rel_list 是一个非终结符，表示一个或多个表名（关系名）; 在 SQL 查询中，FROM 子句后面可以跟一个表名，也可以跟多个表名（用逗号分隔）
     relation {
       $$ = new std::vector<std::string>();
       $$->push_back($1);
@@ -585,7 +665,7 @@ where:
       $$ = nullptr;
     }
     | WHERE condition_list {
-      $$ = $2;  
+      $$ = $2;
     }
     ;
 condition_list:
@@ -614,97 +694,98 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
-    |
-    expression LIKE expression
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 2;    // 左边是表达式
-      $$->left_expression = $1;
-      $$->right_is_attr = 2;   // 右边是表达式
-      $$->right_expression = $3;
-      $$->comp = LIKE_OP;
-    }
-    |
-    expression NOT LIKE expression
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 2;    // 左边是表达式
-      $$->left_expression = $1;
-      $$->right_is_attr = 2;   // 右边是表达式
-      $$->right_expression = $4;
-      $$->comp = NOT_LIKE_OP;
-    }
-//rel_attr comp_op value
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 1;
-// $$->left_attr = *$1;
-// $$->right_is_attr = 0;
-// $$->right_value = *$3;
-// $$->comp = $2;
-//
-// delete $1;
-// delete $3;
-//
-// value comp_op value
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 0;
-// $$->left_value = *$1;
-// $$->right_is_attr = 0;
-// $$->right_value = *$3;
-// $$->comp = $2;
-//
-// delete $1;
-// delete $3;
-//
-// rel_attr comp_op rel_attr
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 1;
-// $$->left_attr = *$1;
-// $$->right_is_attr = 1;
-// $$->right_attr = *$3;
-// $$->comp = $2;
-//
-// delete $1;
-// delete $3;
-//
-// value comp_op rel_attr
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 0;
-// $$->left_value = *$1;
-// $$->right_is_attr = 1;
-// $$->right_attr = *$3;
-// $$->comp = $2;
-//
-// delete $1;
-// delete $3;
-//
-// rel_attr LIKE value  // 添加 LIKE 条件规则
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 1;
-// $$->left_attr = *$1;
-// $$->right_is_attr = 0;
-// $$->right_value = *$3;
-// $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
-// delete $1;
-// delete $3;
-//
-// rel_attr NOT LIKE value  // 添加 LIKE 条件规则
-//
-// $$ = new ConditionSqlNode;
-// $$->left_is_attr = 1;
-// $$->left_attr = *$1;
-// $$->right_is_attr = 0;
-// $$->right_value = *$4;
-// $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
-// delete $1;
-// delete $4;
-//
     ;
+//    |
+//    expression LIKE expression
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 2;    // 左边是表达式
+//      $$->left_expression = $1;
+//      $$->right_is_attr = 2;   // 右边是表达式
+//      $$->right_expression = $3;
+//      $$->comp = LIKE_OP;
+//    }
+//    |
+//    expression NOT LIKE expression
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 2;    // 左边是表达式
+//      $$->left_expression = $1;
+//      $$->right_is_attr = 2;   // 右边是表达式
+//      $$->right_expression = $4;
+//      $$->comp = NOT_LIKE_OP;
+//    }
+//    rel_attr comp_op value
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 1;
+//      $$->left_attr = *$1;
+//      $$->right_is_attr = 0;
+//      $$->right_value = *$3;
+//      $$->comp = $2;
+//
+//      delete $1;
+//      delete $3;
+//    }
+//    | value comp_op value
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 0;
+//      $$->left_value = *$1;
+//      $$->right_is_attr = 0;
+//      $$->right_value = *$3;
+//      $$->comp = $2;
+//
+//      delete $1;
+//      delete $3;
+//    }
+//    | rel_attr comp_op rel_attr
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 1;
+//      $$->left_attr = *$1;
+//      $$->right_is_attr = 1;
+//      $$->right_attr = *$3;
+//      $$->comp = $2;
+//
+//      delete $1;
+//      delete $3;
+//    }
+//    | value comp_op rel_attr
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 0;
+//      $$->left_value = *$1;
+//      $$->right_is_attr = 1;
+//      $$->right_attr = *$3;
+//      $$->comp = $2;
+//
+//      delete $1;
+//      delete $3;
+//    }
+//    | rel_attr LIKE value  // 添加 LIKE 条件规则
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 1;
+//      $$->left_attr = *$1;
+//      $$->right_is_attr = 0;
+//      $$->right_value = *$3;
+//      $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
+//      delete $1;
+//      delete $3;
+//    }
+//    | rel_attr NOT LIKE value  // 添加 LIKE 条件规则
+//    {
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 1;
+//      $$->left_attr = *$1;
+//      $$->right_is_attr = 0;
+//      $$->right_value = *$4;
+//      $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
+//      delete $1;
+//      delete $4;
+//    }
+//    ;
 
 comp_op:
       EQ { $$ = EQUAL_TO; }
@@ -714,6 +795,7 @@ comp_op:
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
+    | NOT LIKE { $$ = NOT_LIKE_OP; }
     ;
 
 // your code here

@@ -93,6 +93,7 @@ INDEX                                   RETURN_TOKEN(INDEX);
 INNER                                   RETURN_TOKEN(INNER);
 JOIN                                    RETURN_TOKEN(JOIN);  // 是词法分析器规则，负责识别输入文本中的 JOIN 关键字，并将其转换为对应的词法单元。
 ON                                      RETURN_TOKEN(ON);
+COUNT                                   RETURN_TOKEN(COUNT);
 SHOW                                    RETURN_TOKEN(SHOW);
 SYNC                                    RETURN_TOKEN(SYNC);
 SELECT                                  RETURN_TOKEN(SELECT);

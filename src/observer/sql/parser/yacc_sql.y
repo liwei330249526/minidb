@@ -103,6 +103,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         ON
         INNER   // 声明了词法单元
         JOIN   // join
+        COUNT  // count
         LOAD
         DATA
         INFILE
@@ -614,8 +615,20 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
+    | COUNT LBRACE expression RBRACE {
+      // 支持 count (col) / count (exp) 语法
+      $$ = create_aggregate_expression("count", $3, sql_string, &@$);
+    }
     // your code here
     ;
+
+//aggregate_expression:
+//    COUNT LBRACE expression RBRACE
+//    {
+//      $$ = new AggregateExpr(AGG_COUNT, $3);
+//      $$->set_name(token_name(sql_string, &@$));
+//    }
+//    ;
 
 rel_attr:
     ID {
