@@ -38,7 +38,7 @@ public:
     virtual void close_scan(){};
 
   protected:
-    AggregateHashTable *hash_table_;
+    AggregateHashTable *hash_table_;  // hash 表
   };
 
   /**
@@ -75,8 +75,8 @@ public:
     RC next(Chunk &chunk) override;
 
   private:
-    StandardHashTable::iterator end_;
-    StandardHashTable::iterator it_;
+    StandardHashTable::iterator end_; // 结束
+    StandardHashTable::iterator it_;  // 迭代器
   };
   StandardAggregateHashTable(const std::vector<Expression *> aggregations)
   {

@@ -34,3 +34,20 @@ RC SumAggregator::evaluate(Value& result)
   result = value_;
   return RC::SUCCESS;
 }
+RC CountAggregator::accumulate(const Value & value){
+	if (value_.attr_type() == AttrType::UNDEFINED) {
+		value_ = Value(0);
+	}
+
+	ASSERT(value.attr_type() == value_.attr_type(), "type mismatch. value type: %s, value_.type: %s",
+	       attr_type_to_string(value.attr_type()), attr_type_to_string(value_.attr_type()));
+  if (value_.attr_type() != AttrType::UNDEFINED) {
+	  Value::add(value_, Value(1), value_);
+  }
+
+	return RC::SUCCESS;
+}
+RC CountAggregator::evaluate(Value & result){
+  result = value_;
+  return RC::SUCCESS;
+}

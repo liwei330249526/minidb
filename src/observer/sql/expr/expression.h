@@ -421,7 +421,7 @@ public:
   AttrType value_type() const override { return child_->value_type(); }
 
 private:
-  std::string                 aggregate_name_;
+  std::string                 aggregate_name_; // 聚合名字
   std::unique_ptr<Expression> child_;
 };
 

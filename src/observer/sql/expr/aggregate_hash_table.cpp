@@ -26,6 +26,7 @@ void StandardAggregateHashTable::Scanner::open_scan()
 
 RC StandardAggregateHashTable::Scanner::next(Chunk &output_chunk)
 {
+	// 迭代器等于结束
   if (it_ == end_) {
     return RC::RECORD_EOF;
   }
