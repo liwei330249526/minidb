@@ -24,12 +24,12 @@ RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
   }
 
   RC rc         = RC::SUCCESS;
-  left_         = children_[0].get();
-  right_        = children_[1].get();
+  left_         = children_[0].get(); // 左边
+  right_        = children_[1].get(); // 右边
   right_closed_ = true;
   round_done_   = true;
 
-  rc   = left_->open(trx);
+  rc   = left_->open(trx); // 打开左边
   trx_ = trx;
   return rc;
 }
@@ -40,7 +40,7 @@ RC NestedLoopJoinPhysicalOperator::next()
   RC   rc             = RC::SUCCESS;
   if (round_done_) {
     left_need_step = true;
-  } else {
+  } else {               // 右表一轮没有结束， 右表继续递进
     rc = right_next();
     if (rc != RC::SUCCESS) {
       if (rc == RC::RECORD_EOF) {
@@ -53,7 +53,7 @@ RC NestedLoopJoinPhysicalOperator::next()
     }
   }
 
-  if (left_need_step) {
+  if (left_need_step) { // 右边一轮结束，则坐标递进一次
     rc = left_next();
     if (rc != RC::SUCCESS) {
       return rc;
@@ -100,7 +100,9 @@ RC NestedLoopJoinPhysicalOperator::left_next()
 RC NestedLoopJoinPhysicalOperator::right_next()
 {
   RC rc = RC::SUCCESS;
+	// 右表一轮结束了
   if (round_done_) {
+	  // 如果右表算子结束没有结束
     if (!right_closed_) {
       rc = right_->close();
 
@@ -109,7 +111,7 @@ RC NestedLoopJoinPhysicalOperator::right_next()
         return rc;
       }
     }
-
+    // 右表从新打开，从头开始遍历
     rc = right_->open(trx_);
     if (rc != RC::SUCCESS) {
       return rc;
@@ -119,7 +121,7 @@ RC NestedLoopJoinPhysicalOperator::right_next()
     round_done_ = false;
   }
 
-  rc = right_->next();
+  rc = right_->next(); // 右表获取next 值
   if (rc != RC::SUCCESS) {
     if (rc == RC::RECORD_EOF) {
       round_done_ = true;
@@ -127,7 +129,7 @@ RC NestedLoopJoinPhysicalOperator::right_next()
     return rc;
   }
 
-  right_tuple_ = right_->current_tuple();
-  joined_tuple_.set_right(right_tuple_);
+  right_tuple_ = right_->current_tuple(); // 获取值
+  joined_tuple_.set_right(right_tuple_); // 设置到 join 的tuple 中
   return rc;
 }

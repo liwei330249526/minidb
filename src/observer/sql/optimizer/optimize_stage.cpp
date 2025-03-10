@@ -84,6 +84,7 @@ RC OptimizeStage::generate_physical_plan(
   } else {
     LOG_INFO("use tuple iterator");
     session->set_used_chunk_mode(false);
+    // 通过逻辑计划，构造物理计划
     rc = physical_plan_generator_.create(*logical_operator, physical_operator);
   }
   if (rc != RC::SUCCESS) {

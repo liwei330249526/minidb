@@ -92,6 +92,10 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   filter_unit = new FilterUnit;
   // 左边是属性，即列名
+	BinderContext binder_context;
+	for (auto &tb : *tables) {
+		binder_context.add_table(tb.second);
+	}
   if (condition.left_is_attr == 1) {
     Table           *table = nullptr;
     const FieldMeta *field = nullptr;
@@ -111,8 +115,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   } else if (condition.left_is_attr == 2) {
   	// 左边是表达式
 	  FilterObj filter_obj;
-	  BinderContext binder_context;
-	  binder_context.add_table(default_table);
+//	  BinderContext binder_context;
+//	  binder_context.add_table(default_table);
 	  // collect query fields in `select` statement
 	  vector<unique_ptr<Expression>> bound_expressions;
 	  ExpressionBinder expression_binder(binder_context);
@@ -150,8 +154,8 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 	  FilterObj filter_obj;
 
 	  // collect query fields in `select` statement
-	  BinderContext binder_context;
-	  binder_context.add_table(default_table);
+//	  BinderContext binder_context;
+//	  binder_context.add_table(default_table);
 	  vector<unique_ptr<Expression>> bound_expressions;
 	  ExpressionBinder expression_binder(binder_context);
 	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector

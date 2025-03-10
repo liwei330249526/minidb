@@ -101,21 +101,24 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
 
   unique_ptr<LogicalOperator> table_oper(nullptr);
   last_oper = &table_oper;
-
+  // 获取所有表， join 的话，有多个表; 每个表有一个 TableGet算子
   const std::vector<Table *> &tables = select_stmt->tables();
   for (Table *table : tables) {
 
     unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, ReadWriteMode::READ_ONLY));
     if (table_oper == nullptr) {
+    	// 第一个table 作为主表, 主表是 TableGet 算子
       table_oper = std::move(table_get_oper);
     } else {
+    	// 后续的表作为join 表, 构造了 join_oper
+    	// 创建了 join 的逻辑计划, join 逻辑算子, join 表是一个 TableGet 算子， 共同加入一个 Join 算子
       JoinLogicalOperator *join_oper = new JoinLogicalOperator;
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
   }
-
+  // 创建 predicate 逻辑计划
   unique_ptr<LogicalOperator> predicate_oper;
 
   RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
@@ -131,7 +134,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
 
     last_oper = &predicate_oper;
   }
-
+  // 创建 group by 逻辑计划
   unique_ptr<LogicalOperator> group_by_oper;
   rc = create_group_by_plan(select_stmt, group_by_oper);
   if (OB_FAIL(rc)) {

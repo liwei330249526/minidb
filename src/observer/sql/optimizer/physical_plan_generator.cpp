@@ -84,7 +84,7 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
     case LogicalOperatorType::EXPLAIN: {
       return create_plan(static_cast<ExplainLogicalOperator &>(logical_operator), oper);
     } break;
-
+    // 创建连接物理计划
     case LogicalOperatorType::JOIN: {
       return create_plan(static_cast<JoinLogicalOperator &>(logical_operator), oper);
     } break;
@@ -333,13 +333,13 @@ RC PhysicalPlanGenerator::create_plan(ExplainLogicalOperator &explain_oper, uniq
 RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr<PhysicalOperator> &oper)
 {
   RC rc = RC::SUCCESS;
-
+  // join 的左右算子， 即join的左右表
   vector<unique_ptr<LogicalOperator>> &child_opers = join_oper.children();
   if (child_opers.size() != 2) {
     LOG_WARN("join operator should have 2 children, but have %d", child_opers.size());
     return RC::INTERNAL;
   }
-
+  // 创建 join 物理算子
   unique_ptr<PhysicalOperator> join_physical_oper(new NestedLoopJoinPhysicalOperator);
   for (auto &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;
@@ -348,7 +348,7 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
       LOG_WARN("failed to create physical child oper. rc=%s", strrc(rc));
       return rc;
     }
-
+    // join 的左右表的物理算子
     join_physical_oper->add_child(std::move(child_physical_oper));
   }
 
