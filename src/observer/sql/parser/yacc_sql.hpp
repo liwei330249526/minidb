@@ -93,28 +93,32 @@ extern int yydebug;
     ON = 294,                      /* ON  */
     INNER = 295,                   /* INNER  */
     JOIN = 296,                    /* JOIN  */
-    COUNT = 297,                   /* COUNT  */
-    LOAD = 298,                    /* LOAD  */
-    DATA = 299,                    /* DATA  */
-    INFILE = 300,                  /* INFILE  */
-    EXPLAIN = 301,                 /* EXPLAIN  */
-    STORAGE = 302,                 /* STORAGE  */
-    FORMAT = 303,                  /* FORMAT  */
-    EQ = 304,                      /* EQ  */
-    LT = 305,                      /* LT  */
-    GT = 306,                      /* GT  */
-    LE = 307,                      /* LE  */
-    GE = 308,                      /* GE  */
-    NE = 309,                      /* NE  */
-    LIKE = 310,                    /* LIKE  */
-    NOT = 311,                     /* NOT  */
-    PERCENT = 312,                 /* PERCENT  */
-    UNDERSCORE = 313,              /* UNDERSCORE  */
-    NUMBER = 314,                  /* NUMBER  */
-    FLOAT = 315,                   /* FLOAT  */
-    ID = 316,                      /* ID  */
-    SSS = 317,                     /* SSS  */
-    UMINUS = 318                   /* UMINUS  */
+    SUM = 297,                     /* SUM  */
+    COUNT = 298,                   /* COUNT  */
+    AVG = 299,                     /* AVG  */
+    MAX = 300,                     /* MAX  */
+    MIN = 301,                     /* MIN  */
+    LOAD = 302,                    /* LOAD  */
+    DATA = 303,                    /* DATA  */
+    INFILE = 304,                  /* INFILE  */
+    EXPLAIN = 305,                 /* EXPLAIN  */
+    STORAGE = 306,                 /* STORAGE  */
+    FORMAT = 307,                  /* FORMAT  */
+    EQ = 308,                      /* EQ  */
+    LT = 309,                      /* LT  */
+    GT = 310,                      /* GT  */
+    LE = 311,                      /* LE  */
+    GE = 312,                      /* GE  */
+    NE = 313,                      /* NE  */
+    LIKE = 314,                    /* LIKE  */
+    NOT = 315,                     /* NOT  */
+    PERCENT = 316,                 /* PERCENT  */
+    UNDERSCORE = 317,              /* UNDERSCORE  */
+    NUMBER = 318,                  /* NUMBER  */
+    FLOAT = 319,                   /* FLOAT  */
+    ID = 320,                      /* ID  */
+    SSS = 321,                     /* SSS  */
+    UMINUS = 322                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -123,7 +127,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 125 "yacc_sql.y"
+#line 129 "yacc_sql.y"
    // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
@@ -144,7 +148,7 @@ union YYSTYPE
   int                                        number;
   float                                      floats;
 
-#line 148 "yacc_sql.hpp"
+#line 152 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

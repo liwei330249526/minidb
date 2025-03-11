@@ -103,7 +103,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         ON
         INNER   // 声明了词法单元
         JOIN   // join
+        SUM    // sum
         COUNT  // count
+        AVG    // avg
+        MAX    // max
+        MIN    // min
         LOAD
         DATA
         INFILE
@@ -615,9 +619,25 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
+    | SUM LBRACE expression RBRACE {
+      // 支持 sum (col) 语法
+      $$ = create_aggregate_expression("sum", $3, sql_string, &@$);
+    }
     | COUNT LBRACE expression RBRACE {
-      // 支持 count (col) / count (exp) 语法
+      // 支持 count (col)  语法
       $$ = create_aggregate_expression("count", $3, sql_string, &@$);
+    }
+    | AVG LBRACE expression RBRACE {
+      // 支持 avg (col) 语法
+      $$ = create_aggregate_expression("avg", $3, sql_string, &@$);
+    }
+    | MAX LBRACE expression RBRACE {
+      // 支持 max (col) 语法
+      $$ = create_aggregate_expression("max", $3, sql_string, &@$);
+    }
+    | MIN LBRACE expression RBRACE {
+      // 支持 min (col) 语法
+      $$ = create_aggregate_expression("min", $3, sql_string, &@$);
     }
     // your code here
     ;
