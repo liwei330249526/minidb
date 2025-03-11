@@ -42,3 +42,33 @@ public:
 		RC accumulate(const Value &value) override;
 		RC evaluate(Value &result) override;
 };
+
+//AVG,
+//MAX,
+//MIN,
+
+class AVGAggregator : public Aggregator
+{
+public:
+		RC accumulate(const Value &value) override;
+		RC evaluate(Value &result) override;
+
+protected:
+		Value sum_;
+		Value count_;
+};
+
+
+class MAXAggregator : public Aggregator
+{
+public:
+		RC accumulate(const Value &value) override;
+		RC evaluate(Value &result) override;
+};
+
+class MINAggregator : public Aggregator
+{
+public:
+		RC accumulate(const Value &value) override;
+		RC evaluate(Value &result) override;
+};

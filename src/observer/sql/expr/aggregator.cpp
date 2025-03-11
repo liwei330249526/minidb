@@ -51,3 +51,67 @@ RC CountAggregator::evaluate(Value & result){
   result = value_;
   return RC::SUCCESS;
 }
+
+RC AVGAggregator::accumulate(const Value & value){
+	// sum + value
+	if (sum_.attr_type() == AttrType::UNDEFINED) {
+		sum_ = value;
+		count_ = Value(1);
+		return RC::SUCCESS;
+	}
+
+	ASSERT(value.attr_type() == sum_.attr_type(), "type mismatch. value type: %s, value_.type: %s",
+	       attr_type_to_string(value.attr_type()), attr_type_to_string(sum_.attr_type()));
+
+	Value::add(value, sum_, sum_);
+	Value::add(count_, Value(1), count_);
+
+//   // count + 1
+//	if (count_.attr_type() == AttrType::UNDEFINED) {
+//		count_ = Value(0);
+//	}
+
+  return RC::SUCCESS;
+}
+
+RC AVGAggregator::evaluate(Value & result){
+	value_.set_type(AttrType::FLOATS);
+	Value::divide(sum_, count_, value_);
+	result = value_;
+	return RC::SUCCESS;
+}
+
+RC MAXAggregator::accumulate(const Value & value){
+	if (value_.attr_type() == AttrType::UNDEFINED) {
+		value_ = value;
+		return RC::SUCCESS;
+	}
+
+	if (value_.compare(value) < 0) {
+	  value_.set_value(value);
+  }
+
+  return RC::SUCCESS;
+}
+
+RC MAXAggregator::evaluate(Value & result){
+	result = value_;
+	return RC::SUCCESS;
+}
+RC MINAggregator::accumulate(const Value & value){
+	if (value_.attr_type() == AttrType::UNDEFINED) {
+		value_ = value;
+		return RC::SUCCESS;
+	}
+
+	if (value_.compare(value) > 0) {
+		value_.set_value(value);
+	}
+
+	return RC::SUCCESS;
+}
+
+RC MINAggregator::evaluate(Value & result){
+	result = value_;
+	return RC::SUCCESS;
+}

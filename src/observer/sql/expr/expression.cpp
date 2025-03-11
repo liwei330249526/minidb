@@ -622,6 +622,9 @@ bool AggregateExpr::equal(const Expression &other) const
   return aggregate_type_ == other_aggr_expr.aggregate_type() && child_->equal(*other_aggr_expr.child());
 }
 
+//AVG,
+//MAX,
+//MIN,
 unique_ptr<Aggregator> AggregateExpr::create_aggregator() const
 {
   unique_ptr<Aggregator> aggregator;
@@ -634,6 +637,18 @@ unique_ptr<Aggregator> AggregateExpr::create_aggregator() const
 	    aggregator = make_unique<CountAggregator>();
 	    break;
     }
+	  case Type::AVG: {
+		  aggregator = make_unique<AVGAggregator>();
+		  break;
+	  }
+	  case Type::MAX: {
+		  aggregator = make_unique<MAXAggregator>();
+		  break;
+	  }
+	  case Type::MIN: {
+		  aggregator = make_unique<MINAggregator>();
+		  break;
+	  }
     default: {
       ASSERT(false, "unsupported aggregate type");
       break;
