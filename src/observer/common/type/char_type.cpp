@@ -45,6 +45,11 @@ RC CharType::cast_to(const Value &val, AttrType type, Value &result) const
       int v = val.get_int();
       result.set_int(v);
 	  }break;
+	  case AttrType::FLOATS :
+	  {
+		  float v = val.get_float();
+		  result.set_float(v);
+	  }break;
 
     default: return RC::UNIMPLEMENTED;
   }
@@ -61,6 +66,9 @@ int CharType::cast_cost(AttrType type)
   	return 1;
   } else if (type == AttrType::INTS) {
     // char 可以转为 int
+    return 1;
+  } else if (type == AttrType::FLOATS) {
+    // char 可以转换为 floats
     return 1;
   }
 
