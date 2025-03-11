@@ -40,6 +40,11 @@ RC CharType::cast_to(const Value &val, AttrType type, Value &result) const
 			}
 			result.set_date(y, m, d);
 	  }break;
+	  case AttrType::INTS :
+	  {
+      int v = val.get_int();
+      result.set_int(v);
+	  }break;
 
     default: return RC::UNIMPLEMENTED;
   }
@@ -54,6 +59,9 @@ int CharType::cast_cost(AttrType type)
   } else if(type == AttrType::DATES) {
   	// 如果 cost 值较小，则可以转换
   	return 1;
+  } else if (type == AttrType::INTS) {
+    // char 可以转为 int
+    return 1;
   }
 
   return INT32_MAX;
