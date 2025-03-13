@@ -53,6 +53,13 @@ Value::Value(Value &&other)
   other.own_data_  = false;
   other.length_    = 0;
 }
+// 构造方法
+Value::Value(vector<float> &val) {
+  attr_type_ = AttrType::VECTORS;
+  value_.vector_value_ = new vector<float>(val); // 一个float 的数组指针, 数据长度为 lenght_字节
+  length_ = val.size() * sizeof(float);
+  own_data_ = true;
+}
 
 Value &Value::operator=(const Value &other)
 {
@@ -93,12 +100,21 @@ Value &Value::operator=(Value &&other)
 void Value::reset()
 {
   switch (attr_type_) {
-    case AttrType::CHARS:
+    case AttrType::CHARS: {
       if (own_data_ && value_.pointer_value_ != nullptr) {
         delete[] value_.pointer_value_;
         value_.pointer_value_ = nullptr;
       }
       break;
+    }
+    case AttrType::VECTORS: {
+      if (own_data_ && value_.vector_value_ != nullptr) {
+        delete value_.vector_value_;
+        value_.vector_value_ = nullptr;
+      }
+      break;
+    }
+
     default: break;
   }
 
@@ -106,7 +122,7 @@ void Value::reset()
   length_    = 0;
   own_data_  = false;
 }
-
+// 可以保存 float 数组，给一个data 指针和长度即可
 void Value::set_data(char *data, int length)
 {
   switch (attr_type_) {
@@ -129,6 +145,13 @@ void Value::set_data(char *data, int length)
     	// select 的时候， 会走到这里date 数据转换为 Value
 	    value_.int_value_ = *(int *)data;
 	    length_            = length;
+    } break;
+    case AttrType::VECTORS: {
+      // select 的时候， 会走到这里date 数据转换为 Value
+      float *start = (float *)data;
+      float *end = start + length / sizeof(float);
+      vector<float> val(start, end);
+      set_vector(val);
     } break;
     default: {
       LOG_WARN("unknown data type: %d", attr_type_);
@@ -216,6 +239,9 @@ const char *Value::data() const
   switch (attr_type_) {
     case AttrType::CHARS: {
       return value_.pointer_value_;
+    } break;
+    case AttrType::VECTORS: {
+      return (const char *)(value_.vector_value_->data()); // c 风格
     } break;
     default: {
       return (const char *)&value_;
@@ -332,8 +358,26 @@ bool Value::get_boolean() const
   }
   return false;
 }
+// 返回 vector 数据
+vector<float> Value::get_vector() const {
+  if (attr_type_ != AttrType::VECTORS) {
+    LOG_ERROR("unknown data type. type=%d", attr_type_);
+    return vector<float>();
+  }
+  return *value_.vector_value_;
+}
+
+
 void Value::set_date(int y, int m, int d){
 	this->attr_type_ = AttrType::DATES;
 	this->value_.int_value_ = y * 10000 + m * 100 + d;
 	return;
+}
+
+void Value::set_vector(vector<float> &val) {
+  reset();
+  attr_type_ = AttrType::VECTORS;
+  value_.vector_value_ = new vector<float>(val);
+  length_ = val.size() * sizeof(float);
+  own_data_ = true;
 }

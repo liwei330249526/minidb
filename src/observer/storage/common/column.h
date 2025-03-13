@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 /**
  * @brief A column contains multiple values in contiguous memory with a specified type.
+ * column 包含很多值，这些值是连续的，同一个指定类型
  */
 // TODO: `Column` currently only support fixed-length type.
 class Column
@@ -84,7 +85,7 @@ public:
 
 private:
   static constexpr size_t DEFAULT_CAPACITY = 8192;
-
+  // 数据指针
   char *data_ = nullptr;
   /// 当前列值数量
   int count_ = 0;

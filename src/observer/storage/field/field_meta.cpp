@@ -46,10 +46,14 @@ RC FieldMeta::init(const char *name, AttrType attr_type, int attr_offset, int at
               name, attr_type, attr_offset, attr_len);
     return RC::INVALID_ARGUMENT;
   }
+  // vector(3) 占12 个字节，Vector 的元素连续存储
+//  if (attr_type == AttrType::VECTORS) {
+//    attr_len = attr_len * sizeof(float); // 应该是列长度
+//  }
 
   name_        = name;
   attr_type_   = attr_type;
-  attr_len_    = attr_len;
+  attr_len_    = attr_len;  // 对Vector 而言，应该是Vector 元素长度
   attr_offset_ = attr_offset;
   visible_     = visible;
   field_id_ = field_id;

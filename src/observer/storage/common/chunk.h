@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 
 /**
  * @brief A Chunk represents a set of columns.
+ * 代表了列的集合
  */
 class Chunk
 {

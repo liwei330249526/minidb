@@ -266,6 +266,8 @@ int LogicalPlanGenerator::implicit_cast_cost(AttrType from, AttrType to)
 RC LogicalPlanGenerator::create_plan(InsertStmt *insert_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
   Table        *table = insert_stmt->table();
+  // 这个构造函数接受两个迭代器（或指针）first 和 last，用于指定一个元素范围。它会将 [first, last) 区间内的元素复制到新创建的 std::vector 中。
+  // 这里的 first 指向区间的起始位置，last 指向区间的结束位置（但不包含 last 所指向的元素）
   vector<Value> values(insert_stmt->values(), insert_stmt->values() + insert_stmt->value_amount());
 
   InsertLogicalOperator *insert_operator = new InsertLogicalOperator(table, values);

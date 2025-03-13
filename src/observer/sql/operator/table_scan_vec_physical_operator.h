@@ -48,5 +48,6 @@ private:
   Chunk                                    all_columns_;
   Chunk                                    filterd_columns_;
   std::vector<uint8_t>                     select_;
+  // 谓词表达式集合
   std::vector<std::unique_ptr<Expression>> predicates_;
 };

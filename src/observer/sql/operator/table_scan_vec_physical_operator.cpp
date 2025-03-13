@@ -23,6 +23,7 @@ RC TableScanVecPhysicalOperator::open(Trx *trx)
   }
   // TODO: don't need to fetch all columns from record manager
   for (int i = 0; i < table_->table_meta().field_num(); ++i) {
+    // 列加入集合
     all_columns_.add_column(
         make_unique<Column>(*table_->table_meta().field(i)), table_->table_meta().field(i)->field_id());
     filterd_columns_.add_column(
@@ -38,21 +39,27 @@ RC TableScanVecPhysicalOperator::next(Chunk &chunk)
   all_columns_.reset_data();
   filterd_columns_.reset_data();
   if (OB_SUCC(rc = chunk_scanner_.next_chunk(all_columns_))) {
+    // 每次处理一个列
     select_.assign(all_columns_.rows(), 1);
     if (predicates_.empty()) {
       chunk.reference(all_columns_);
     } else {
+      // 过滤
       rc = filter(all_columns_);
       if (rc != RC::SUCCESS) {
         LOG_TRACE("filtered failed=%s", strrc(rc));
         return rc;
       }
       // TODO: if all setted, it doesn't need to set one by one
+      // select 要不要选择 i 行
       for (int i = 0; i < all_columns_.rows(); i++) {
+        // i 行不选
         if (select_[i] == 0) {
           continue;
         }
+        // i 行选
         for (int j = 0; j < all_columns_.column_num(); j++) {
+          // 遍历第 i 行的每一列, 将数据加入到 filterd_columns_
           filterd_columns_.column(j).append_one(
               (char *)all_columns_.column(filterd_columns_.column_ids(j)).get_value(i).data());
         }

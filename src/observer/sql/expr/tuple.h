@@ -59,7 +59,7 @@ public:
   const TupleCellSpec &cell_at(int i) const { return cells_[i]; }
 
 private:
-  std::vector<TupleCellSpec> cells_;
+  std::vector<TupleCellSpec> cells_; // 一行数据
 };
 
 /**

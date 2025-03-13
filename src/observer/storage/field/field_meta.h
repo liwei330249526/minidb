@@ -54,7 +54,7 @@ protected:
   string   name_;
   AttrType attr_type_; // 列类型
   int      attr_offset_; // 这个列所在的地址偏移
-  int      attr_len_; // 列的长度
+  int      attr_len_; // 列的长度 ，  对Vector 而言，应该是Vector 元素个数 * float
   bool     visible_; // 是是否可见
   int      field_id_; // filed id
 };

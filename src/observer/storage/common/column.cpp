@@ -94,11 +94,12 @@ RC Column::append(char *data, int count)
     LOG_WARN("append data to non-owned column");
     return RC::INTERNAL;
   }
+  // 判断如果加上count，是否超出阀值
   if (count_ + count > capacity_) {
     LOG_WARN("append data to full column");
     return RC::INTERNAL;
   }
-
+  // 将数据从 data 拷贝到 data_ + count_ * attr_len_ 位置； 拷贝长度为 count * attr_len_
   memcpy(data_ + count_ * attr_len_, data, count * attr_len_);
   count_ += count;
   return RC::SUCCESS;
@@ -111,7 +112,7 @@ Value Column::get_value(int index) const
   }
   return Value(attr_type_, &data_[index * attr_len_], attr_len_);
 }
-
+// 引用里面的数据
 void Column::reference(const Column &column)
 {
   if (this == &column) {

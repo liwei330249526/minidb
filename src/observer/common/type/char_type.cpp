@@ -50,6 +50,32 @@ RC CharType::cast_to(const Value &val, AttrType type, Value &result) const
 		  float v = val.get_float();
 		  result.set_float(v);
 	  }break;
+    case AttrType::VECTORS :
+    {
+      string str = val.get_string();
+      if (!(str.front() == '[' && str.back() == ']')) {
+        return RC::UNIMPLEMENTED;
+      }
+      str = str.substr(1, str.size()-2);
+      string token;
+      istringstream iss(str);
+      vector<float> vals;
+      while (std::getline(iss, token, ',')) {
+        try {
+          float value = std::stof(token);
+          vals.push_back(value);
+        } catch (const std::invalid_argument& e) {
+//          std::cerr << "Invalid number format: " << token << std::endl;
+          LOG_INFO(" Invalid number format: ", token.c_str());
+        } catch (const std::out_of_range& e) {
+          LOG_INFO(" Number out of range: ", token.c_str());
+//          std::cerr << "Number out of range: " << token << std::endl;
+        }
+      }
+      result.set_vector(vals);
+//      result.set_type(AttrType::VECTORS );
+//      result.set_data((char*)(vals.data()), vals.size() * sizeof(float));
+    }break;
 
     default: return RC::UNIMPLEMENTED;
   }

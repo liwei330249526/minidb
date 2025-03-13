@@ -354,12 +354,12 @@ attr_def_list:
     ;
     
 attr_def:
-    ID type LBRACE number RBRACE 
+    ID type LBRACE number RBRACE  // 这里支持了向量, 例如 C1 VECTOR(3)
     {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
-      $$->length = $4;
+      $$->length = $4 * 4;  // float 字节是4， 有number个 float
       free($1);
     }
     | ID type

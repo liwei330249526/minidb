@@ -262,20 +262,24 @@ RC ComparisonExpr::eval(Chunk &chunk, std::vector<uint8_t> &select)
   Column left_column;
   Column right_column;
 
+  // 获取左边列
   rc = left_->get_column(chunk, left_column);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
+  // 获取右边列
   rc = right_->get_column(chunk, right_column);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
     return rc;
   }
+  // 类型校验
   if (left_column.attr_type() != right_column.attr_type()) {
     LOG_WARN("cannot compare columns with different types");
     return RC::INTERNAL;
   }
+  // 列比较
   if (left_column.attr_type() == AttrType::INTS) {
     rc = compare_column<int>(left_column, right_column, select);
   } else if (left_column.attr_type() == AttrType::FLOATS) {

@@ -19,7 +19,9 @@ void Chunk::add_column(unique_ptr<Column> col, int col_id)
 RC Chunk::reference(Chunk &chunk)
 {
   reset();
+  // 设置Vector长度
   this->columns_.resize(chunk.column_num());
+
   for (size_t i = 0; i < columns_.size(); ++i) {
     if (nullptr == columns_[i]) {
       columns_[i] = make_unique<Column>();

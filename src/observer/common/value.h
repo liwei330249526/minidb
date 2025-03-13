@@ -49,6 +49,7 @@ public:
   explicit Value(float val);
   explicit Value(bool val);
   explicit Value(const char *s, int len = 0);
+  explicit Value(vector<float> &val);
 
   Value(const Value &other);
   Value(Value &&other);
@@ -94,6 +95,7 @@ public:
   void set_value(const Value &value);
   void set_boolean(bool val);
   void set_date(int y, int m, int d);
+  void set_vector(vector<float> &val);
 
   string to_string() const;
 
@@ -113,6 +115,7 @@ public:
   float  get_float() const;
   string get_string() const;
   bool   get_boolean() const;
+  vector<float> get_vector() const;
 
 private:
   void set_int(int val);
@@ -122,7 +125,7 @@ private:
 
 private:
   AttrType attr_type_ = AttrType::UNDEFINED; // 值类型
-  int      length_    = 0;
+  int      length_    = 0;  // 字节长度
 
   union Val
   {
@@ -130,6 +133,7 @@ private:
     float   float_value_;
     bool    bool_value_;
     char   *pointer_value_; // 联合体，对上面的值赋值后，可以通过这个指针获取对应值
+    vector<float> *vector_value_;  // vector 指针
   } value_ = {.int_value_ = 0};
 
   /// 是否申请并占有内存, 目前对于 CHARS 类型 own_data_ 为true, 其余类型 own_data_ 为false

@@ -310,7 +310,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &    value = values[i];
     if (field->type() != value.attr_type()) {
-      Value real_value;
+      Value real_value; // 是一个局部变量，局部变量自动析构
       // 类型不同，则尝试类型转换，将新值保存在 real_value
       rc = Value::cast_to(value, field->type(), real_value);
       if (OB_FAIL(rc)) {
@@ -342,6 +342,10 @@ RC Table::set_value_to_record(char *record_data, const Value &value, const Field
   	// 如果record 空间该字段的空间大小更小，则复制空间长度
     if (copy_len > data_len) {
       copy_len = data_len + 1;
+    }
+  } else if (field->type() == AttrType::VECTORS) {
+    if (copy_len > data_len) {
+      copy_len = data_len;
     }
   }
   memcpy(record_data + field->offset(), value.data(), copy_len);

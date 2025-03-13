@@ -38,8 +38,8 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt)
   }
 
   // check the fields number
-  const Value     *values     = inserts.values.data();
-  const int        value_num  = static_cast<int>(inserts.values.size());
+  const Value     *values     = inserts.values.data(); //  std::vector<Value> 的指针
+  const int        value_num  = static_cast<int>(inserts.values.size()); // 数据的长度
   const TableMeta &table_meta = table->table_meta();
   const int        field_num  = table_meta.field_num() - table_meta.sys_field_num();
   if (field_num != value_num) {
