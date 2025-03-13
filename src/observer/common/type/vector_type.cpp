@@ -16,7 +16,8 @@ See the Mulan PSL v2 for more details. */
 
 int VectorType::compare(const Value &left, const Value &right) const
 {
-  ASSERT(left.attr_type() == AttrType::VECTORS && right.attr_type() == AttrType::VECTORS, "invalid type");
+  ASSERT(!((left.attr_type() != AttrType::VECTORS && left.attr_type() != AttrType::CHARS) ||
+         (right.attr_type() != AttrType::VECTORS && right.attr_type() != AttrType::CHARS)), "invalid type");
 //  if (left.attr_type() != AttrType::VECTORS || right.attr_type() != AttrType::VECTORS) {
 //    return RC::INVALID_ARGUMENT;
 //  }
@@ -44,7 +45,8 @@ int VectorType::compare(const Value &left, const Value &right) const
 
 // 向量加法
 RC VectorType::add(const Value &left, const Value &right, Value &result) const {
-  if (left.attr_type() != AttrType::VECTORS || right.attr_type() != AttrType::VECTORS) {
+  if ((left.attr_type() != AttrType::VECTORS && left.attr_type() != AttrType::CHARS) ||
+      (right.attr_type() != AttrType::VECTORS && right.attr_type() != AttrType::CHARS)) {
     return RC::INVALID_ARGUMENT;
   }
   // 常量引用可以绑定到临时对象，延长临时对象的生命周期，避免了不必要的拷贝。这里的临时对象就是 get_vector() 函数返回的 std::vector<float> 对象的副本。
@@ -64,7 +66,8 @@ RC VectorType::add(const Value &left, const Value &right, Value &result) const {
 
 // 向量减法
 RC VectorType::subtract(const Value &left, const Value &right, Value &result) const {
-  if (left.attr_type() != AttrType::VECTORS || right.attr_type() != AttrType::VECTORS) {
+  if ((left.attr_type() != AttrType::VECTORS && left.attr_type() != AttrType::CHARS) ||
+      (right.attr_type() != AttrType::VECTORS && right.attr_type() != AttrType::CHARS)) {
     return RC::INVALID_ARGUMENT;
   }
   // 常量引用可以绑定到临时对象，延长临时对象的生命周期，避免了不必要的拷贝。这里的临时对象就是 get_vector() 函数返回的 std::vector<float> 对象的副本。
@@ -83,7 +86,8 @@ RC VectorType::subtract(const Value &left, const Value &right, Value &result) co
 }
 
 RC VectorType::multiply(const Value &left, const Value &right, Value &result) const {
-  if (left.attr_type() != AttrType::VECTORS || right.attr_type() != AttrType::VECTORS) {
+  if ((left.attr_type() != AttrType::VECTORS && left.attr_type() != AttrType::CHARS) ||
+      (right.attr_type() != AttrType::VECTORS && right.attr_type() != AttrType::CHARS)) {
     return RC::INVALID_ARGUMENT;
   }
   // 常量引用可以绑定到临时对象，延长临时对象的生命周期，避免了不必要的拷贝。这里的临时对象就是 get_vector() 函数返回的 std::vector<float> 对象的副本。
@@ -103,7 +107,8 @@ RC VectorType::multiply(const Value &left, const Value &right, Value &result) co
 
 // 点积
 RC VectorType::dot(const Value &left, const Value &right, Value &result) const {
-  if (left.attr_type() != AttrType::VECTORS || right.attr_type() != AttrType::VECTORS) {
+  if ((left.attr_type() != AttrType::VECTORS && left.attr_type() != AttrType::CHARS) ||
+      (right.attr_type() != AttrType::VECTORS && right.attr_type() != AttrType::CHARS)) {
     return RC::INVALID_ARGUMENT;
   }
   const auto &left_vec = left.get_vector();

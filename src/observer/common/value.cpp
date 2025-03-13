@@ -360,11 +360,16 @@ bool Value::get_boolean() const
 }
 // 返回 vector 数据
 vector<float> Value::get_vector() const {
-  if (attr_type_ != AttrType::VECTORS) {
-    LOG_ERROR("unknown data type. type=%d", attr_type_);
-    return vector<float>();
+  if (attr_type_ == AttrType::VECTORS ) {
+    return *value_.vector_value_;
+  } else if(attr_type_ == AttrType::CHARS) {
+    Value real_value; // 是一个局部变量，局部变量自动析构
+    // 类型不同，则尝试类型转换，将新值保存在 real_value
+    Value::cast_to(*this, AttrType::VECTORS, real_value); // check
+    return real_value.get_vector();
   }
-  return *value_.vector_value_;
+  LOG_ERROR("unknown data type. type=%d", attr_type_);
+  return vector<float>();
 }
 
 
