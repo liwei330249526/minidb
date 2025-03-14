@@ -350,6 +350,7 @@ private:
 /**
  * @brief 算术表达式
  * @ingroup Expression
+ * 算数表达式
  */
 class ArithmeticExpr : public Expression
 {
@@ -424,7 +425,7 @@ private:
   std::string                 aggregate_name_; // 聚合名字
   std::unique_ptr<Expression> child_;
 };
-
+// agg 表达式
 class AggregateExpr : public Expression
 {
 public:
@@ -467,4 +468,35 @@ public:
 private:
   Type                        aggregate_type_;
   std::unique_ptr<Expression> child_;
+};
+
+enum VectorFunctionType {
+    L2_DISTANCE,
+    COSINE_DISTANCE,
+    INNER_PRODUCT
+};
+
+// 向量表达式
+class VectorFunctionExpr : public Expression {
+public:
+    VectorFunctionExpr(VectorFunctionType type, Expression *left, Expression *right)
+            : type_(type), left_(left), right_(right) {}
+
+    ~VectorFunctionExpr() {
+      if (left_ != nullptr) {
+        delete left_;
+      }
+      if (right_ != nullptr) {
+        delete right_;
+      }
+    }
+
+    VectorFunctionType type() const { return type_; }
+    const Expression *left() const { return left_; }
+    const Expression *right() const { return right_; }
+
+private:
+    VectorFunctionType type_;
+    Expression *left_;
+    Expression *right_;
 };

@@ -381,7 +381,7 @@ AttrType ArithmeticExpr::value_type() const
 
   return AttrType::FLOATS;
 }
-
+// left ， right 得到结果值 value
 RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value, Value &value) const
 {
   RC rc = RC::SUCCESS;
@@ -633,6 +633,7 @@ bool AggregateExpr::equal(const Expression &other) const
 //AVG,
 //MAX,
 //MIN,
+// agg 表达式类，创建agg 算子
 unique_ptr<Aggregator> AggregateExpr::create_aggregator() const
 {
   unique_ptr<Aggregator> aggregator;

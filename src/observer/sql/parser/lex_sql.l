@@ -131,6 +131,9 @@ LIKE                                    RETURN_TOKEN(LIKE);  // 添加 LIKE 关�
 NOT                                     RETURN_TOKEN(NOT);   // 添加 NOT 关键字识别
 %                                       RETURN_TOKEN(PERCENT);  // 添加 % 通配符识别
 _                                       RETURN_TOKEN(UNDERSCORE);  // 添加 _ 通配符识别
+L2_DISTANCE                             RETURN_TOKEN(L2_DISTANCE);  // 向量函数距离表达式 欧几里得距离
+COSINE_DISTANCE                         RETURN_TOKEN(COSINE_DISTANCE);  // 向量函数距离表达式 余弦距离
+INNER_PRODUCT                           RETURN_TOKEN(INNER_PRODUCT);  // 向量函数距离表达式  内积
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);
 ")"                                     RETURN_TOKEN(RBRACE);

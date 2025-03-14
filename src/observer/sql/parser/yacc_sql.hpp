@@ -114,11 +114,14 @@ extern int yydebug;
     NOT = 315,                     /* NOT  */
     PERCENT = 316,                 /* PERCENT  */
     UNDERSCORE = 317,              /* UNDERSCORE  */
-    NUMBER = 318,                  /* NUMBER  */
-    FLOAT = 319,                   /* FLOAT  */
-    ID = 320,                      /* ID  */
-    SSS = 321,                     /* SSS  */
-    UMINUS = 322                   /* UMINUS  */
+    L2_DISTANCE = 318,             /* L2_DISTANCE  */
+    COSINE_DISTANCE = 319,         /* COSINE_DISTANCE  */
+    INNER_PRODUCT = 320,           /* INNER_PRODUCT  */
+    NUMBER = 321,                  /* NUMBER  */
+    FLOAT = 322,                   /* FLOAT  */
+    ID = 323,                      /* ID  */
+    SSS = 324,                     /* SSS  */
+    UMINUS = 325                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -127,7 +130,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 129 "yacc_sql.y"
+#line 132 "yacc_sql.y"
    // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
@@ -147,8 +150,9 @@ union YYSTYPE
   char *                                     string;
   int                                        number;
   float                                      floats;
+  VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
 
-#line 152 "yacc_sql.hpp"
+#line 156 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

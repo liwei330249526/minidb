@@ -124,6 +124,9 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         NOT   // 添加 NOT 词法单元
         PERCENT  // 添加 % 词法单元
         UNDERSCORE  // 添加 _ 词法单元
+        L2_DISTANCE  // 向量函数距离表达式 欧几里得距离
+        COSINE_DISTANCE // 向量函数距离表达式 余弦距离
+        INNER_PRODUCT // 向量函数距离表达式  内积
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
@@ -145,6 +148,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   char *                                     string;
   int                                        number;
   float                                      floats;
+  VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
 }
 
 %token <number> NUMBER
@@ -175,7 +179,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <sql_node>            select_stmt
 %type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
 %type <join_node_list>      join_list      // join 链表
-
+%type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -528,7 +532,6 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
    }
     ;
-
 join_list:
     /* empty */  // 空规则， null
     {
@@ -639,9 +642,28 @@ expression:
       // 支持 min (col) 语法
       $$ = create_aggregate_expression("min", $3, sql_string, &@$);
     }
+    | vector_function {  // 新增：支持向量函数
+      $$ = $1;
+    }
     // your code here
     ;
-
+vector_function:
+    L2_DISTANCE LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionType::L2_DISTANCE, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    | COSINE_DISTANCE LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionType::COSINE_DISTANCE, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    | INNER_PRODUCT LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionType::INNER_PRODUCT, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    ;
 //aggregate_expression:
 //    COUNT LBRACE expression RBRACE
 //    {
