@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/value.h"
 #include "common/lang/limits.h"
 #include "common/value.h"
+#include "null_type.h"
 
 int FloatType::compare(const Value &left, const Value &right) const
 {
@@ -48,7 +49,8 @@ RC FloatType::divide(const Value &left, const Value &right, Value &result) const
     // 设置为浮点数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为浮点数最大值。
 //    result.set_float(numeric_limits<float>::max());
     // 设置为未知类型
-    result.reset();
+    result = Value();
+//    result.reset();
   } else {
     result.set_float(left.get_float() / right.get_float());
   }

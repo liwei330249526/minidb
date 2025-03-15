@@ -39,7 +39,7 @@ public:
   friend class VectorType;
   friend class DateType;
 
-  Value() = default;
+//  Value() = default;
 
   ~Value() { reset(); }
 
@@ -50,6 +50,7 @@ public:
   explicit Value(bool val);
   explicit Value(const char *s, int len = 0);
   explicit Value(vector<float> &val);
+  explicit Value() : attr_type_(AttrType::NULLTYPE) {} // 新增构造函数，用于创建 NULL 值
 
   Value(const Value &other);
   Value(Value &&other);
