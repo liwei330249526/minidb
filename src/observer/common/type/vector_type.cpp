@@ -127,6 +127,7 @@ RC VectorType::dot(const Value &left, const Value &right, Value &result) const {
 RC VectorType::to_string(const Value &val, string &result) const {
   stringstream ss;
   const auto &vec = val.get_vector();
+  ss << "[";
   for (size_t i = 0; i < vec.size(); ++i) {
     float v = vec[i];
     ss << common::double_to_str(v);
@@ -134,6 +135,7 @@ RC VectorType::to_string(const Value &val, string &result) const {
       ss << ",";
     }
   }
+  ss << "]";
   result = ss.str();
   return RC::SUCCESS;
 }
