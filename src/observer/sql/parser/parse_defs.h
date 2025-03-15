@@ -21,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/value.h"
 
 class Expression;
+class VectorFunctionExpr;
 
 /**
  * @defgroup SQLParser SQL Parser

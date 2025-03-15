@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2022/07/05.
 //
 
+#include <cmath>
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
 #include "sql/expr/arithmetic_operator.hpp"
@@ -344,7 +345,8 @@ RC ConjunctionExpr::get_value(const Tuple &tuple, Value &value) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
+// 当在构造函数的初始化列表里把 Expression *left 赋值给 std::unique_ptr<Expression> 成员变量时，
+// 实际上是调用了 std::unique_ptr 的这个接收原始指针的构造函数
 ArithmeticExpr::ArithmeticExpr(ArithmeticExpr::Type type, Expression *left, Expression *right)
     : arithmetic_type_(type), left_(left), right_(right)
 {}
@@ -688,4 +690,101 @@ RC AggregateExpr::type_from_string(const char *type_str, AggregateExpr::Type &ty
     rc = RC::INVALID_ARGUMENT;
   }
   return rc;
+}
+
+RC VectorFunctionExpr::get_value(const Tuple &tuple, Value &value) const {
+  RC rc = RC::SUCCESS;
+
+  Value left_value;
+  Value right_value;
+  // left 值
+  rc = left_->get_value(tuple, left_value);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
+    return rc;
+  }
+  // right 值
+  rc = right_->get_value(tuple, right_value);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
+    return rc;
+  }
+  // 计算
+  return calc_value(left_value, right_value, value);
+}
+// 它向编译器和其他开发者表明该函数不会修改调用它的对象的任何非 mutable 数据成员
+RC VectorFunctionExpr::calc_value(const Value &left_value, const Value &right_value, Value &value) const {
+  RC rc = RC::SUCCESS;
+
+  if (left_value.attr_type() == AttrType::UNDEFINED || right_value .attr_type() == AttrType::UNDEFINED) {
+    value.reset();
+    return rc;
+  }
+
+  const AttrType target_type = value_type();
+  value.set_type(target_type);
+  float result;
+  switch (type_) {
+    case VectorFunctionType::L2_DISTANCE: {
+      // 向量函数距离表达式 欧几里得距离
+      result = l2_distance(left_value.get_vector(), right_value.get_vector());
+      value.set_float(result);
+    } break;
+
+    case VectorFunctionType::COSINE_DISTANCE: {
+      // 向量函数距离表达式 余弦距离
+      result = cosine_distance(left_value.get_vector(), right_value.get_vector());
+      value.set_float(result);
+    } break;
+
+    case VectorFunctionType::INNER_PRODUCT: {
+      // 向量函数距离表达式  内积
+      result = inner_product(left_value.get_vector(), right_value.get_vector());
+      value.set_float(result);
+    } break;
+
+    default: {
+      rc = RC::INTERNAL;
+      LOG_WARN("unsupported VectorFunctionExpr type. %d", type_);
+    } break;
+  }
+  return rc;
+}
+
+//l2_distance 函数：
+//遍历向量 A 和 B 的每个元素，计算对应元素差值的平方并累加。
+//最后对累加和取平方根，得到欧氏距离。
+float VectorFunctionExpr::l2_distance(const vector<float> &A, const vector<float> &B) const {
+  double sum = 0.0;
+  for (size_t i = 0; i < A.size(); ++i) {
+    sum += std::pow(A[i] - B[i], 2);
+  }
+  return std::sqrt(sum);
+}
+
+//cosine_distance 函数：
+//先计算向量 A 和 B 的点积、A 的模和 B 的模。
+//再根据余弦距离公式计算并返回结果。
+float VectorFunctionExpr::cosine_distance(const vector<float> &A, const vector<float> &B) const {
+  double dot_product = 0.0;
+  double norm_A = 0.0;
+  double norm_B = 0.0;
+  for (size_t i = 0; i < A.size(); ++i) {
+    dot_product += A[i] * B[i];
+    norm_A += std::pow(A[i], 2);
+    norm_B += std::pow(B[i], 2);
+  }
+  norm_A = std::sqrt(norm_A);
+  norm_B = std::sqrt(norm_B);
+  return 1 - dot_product / (norm_A * norm_B);
+}
+
+//inner_product 函数：
+//遍历向量 A 和 B 的每个元素，计算对应元素的乘积并累加，得到内积。
+float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<float> &B) const {
+  double result = 0.0;
+  for (size_t i = 0; i < A.size(); ++i) {
+    result += A[i] * B[i];
+  }
+  return result;
 }

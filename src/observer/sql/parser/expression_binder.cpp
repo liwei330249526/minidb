@@ -92,6 +92,10 @@ RC ExpressionBinder::bind_expression(unique_ptr<Expression> &expr, vector<unique
       ASSERT(false, "shouldn't be here");
     } break;
 
+    case ExprType::VECTORFUNCTION: {
+      return bind_vectorfunc_expression(expr, bound_expressions);
+    } break;
+
     default: {
       LOG_WARN("unknown expression type: %d", static_cast<int>(expr->type()));
       return RC::INTERNAL;
@@ -318,22 +322,25 @@ RC ExpressionBinder::bind_arithmetic_expression(
   auto arithmetic_expr = static_cast<ArithmeticExpr *>(expr.get());
 
   vector<unique_ptr<Expression>> child_bound_expressions;
+  // 左边，右边
   unique_ptr<Expression>        &left_expr  = arithmetic_expr->left();
   unique_ptr<Expression>        &right_expr = arithmetic_expr->right();
 
+  // bind left
   RC rc = bind_expression(left_expr, child_bound_expressions);
   if (OB_FAIL(rc)) {
     return rc;
   }
-
+  // 应该只有一个
   if (child_bound_expressions.size() != 1) {
     LOG_WARN("invalid left children number of comparison expression: %d", child_bound_expressions.size());
     return RC::INVALID_ARGUMENT;
   }
 
+  // 获取left 第0个
   unique_ptr<Expression> &left = child_bound_expressions[0];
   if (left.get() != left_expr.get()) {
-    left_expr.reset(left.release());
+    left_expr.reset(left.release()); // 重新设置 left_expr
   }
   // 如果是负数， 则绑定left 即可
   if (arithmetic_expr->arithmetic_type() == ArithmeticExpr::Type::NEGATIVE) {
@@ -341,20 +348,21 @@ RC ExpressionBinder::bind_arithmetic_expression(
 	  return RC::SUCCESS;
   }
 
+  // bind 右边
   child_bound_expressions.clear();
   rc = bind_expression(right_expr, child_bound_expressions);
   if (OB_FAIL(rc)) {
     return rc;
   }
-
+  // 应该只有一个
   if (child_bound_expressions.size() != 1) {
     LOG_WARN("invalid right children number of comparison expression: %d", child_bound_expressions.size());
     return RC::INVALID_ARGUMENT;
   }
-
+  // 右边第0个
   unique_ptr<Expression> &right = child_bound_expressions[0];
   if (right.get() != right_expr.get()) {
-    right_expr.reset(right.release());
+    right_expr.reset(right.release()); // 重新设置右边
   }
 
   bound_expressions.emplace_back(std::move(expr));
@@ -452,5 +460,62 @@ RC ExpressionBinder::bind_aggregate_expression(
   }
 
   bound_expressions.emplace_back(std::move(aggregate_expr));
+  return RC::SUCCESS;
+}
+
+// 绑定Vector 函数
+RC ExpressionBinder::bind_vectorfunc_expression(unique_ptr<Expression> &expr,
+                                                vector<std::unique_ptr<Expression>> &bound_expressions) {
+  if (nullptr == expr) {
+    return RC::SUCCESS;
+  }
+
+  auto arithmetic_expr = static_cast<ArithmeticExpr *>(expr.get());
+
+  vector<unique_ptr<Expression>> child_bound_expressions;
+  // 左边，右边
+  unique_ptr<Expression>        &left_expr  = arithmetic_expr->left();
+  unique_ptr<Expression>        &right_expr = arithmetic_expr->right();
+
+  // bind left
+  RC rc = bind_expression(left_expr, child_bound_expressions);
+  if (OB_FAIL(rc)) {
+    return rc;
+  }
+  // 应该只有一个
+  if (child_bound_expressions.size() != 1) {
+    LOG_WARN("invalid left children number of comparison expression: %d", child_bound_expressions.size());
+    return RC::INVALID_ARGUMENT;
+  }
+
+  // 获取left 第0个
+  unique_ptr<Expression> &left = child_bound_expressions[0];
+  if (left.get() != left_expr.get()) {
+    left_expr.reset(left.release()); // 重新设置 left_expr
+  }
+  // 如果是负数， 则绑定left 即可
+  if (arithmetic_expr->arithmetic_type() == ArithmeticExpr::Type::NEGATIVE) {
+    bound_expressions.emplace_back(std::move(expr));
+    return RC::SUCCESS;
+  }
+
+  // bind 右边
+  child_bound_expressions.clear();
+  rc = bind_expression(right_expr, child_bound_expressions);
+  if (OB_FAIL(rc)) {
+    return rc;
+  }
+  // 应该只有一个
+  if (child_bound_expressions.size() != 1) {
+    LOG_WARN("invalid right children number of comparison expression: %d", child_bound_expressions.size());
+    return RC::INVALID_ARGUMENT;
+  }
+  // 右边第0个
+  unique_ptr<Expression> &right = child_bound_expressions[0];
+  if (right.get() != right_expr.get()) {
+    right_expr.reset(right.release()); // 重新设置右边
+  }
+
+  bound_expressions.emplace_back(std::move(expr));
   return RC::SUCCESS;
 }

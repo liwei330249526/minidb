@@ -650,17 +650,17 @@ expression:
 vector_function:
     L2_DISTANCE LBRACE expression COMMA expression RBRACE
     {
-      $$ = new VectorFunctionExpr(VectorFunctionType::L2_DISTANCE, $3, $5);
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::L2_DISTANCE, $3, $5);
       $$->set_name(token_name(sql_string, &@$));
     }
     | COSINE_DISTANCE LBRACE expression COMMA expression RBRACE
     {
-      $$ = new VectorFunctionExpr(VectorFunctionType::COSINE_DISTANCE, $3, $5);
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::COSINE_DISTANCE, $3, $5);
       $$->set_name(token_name(sql_string, &@$));
     }
     | INNER_PRODUCT LBRACE expression COMMA expression RBRACE
     {
-      $$ = new VectorFunctionExpr(VectorFunctionType::INNER_PRODUCT, $3, $5);
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::INNER_PRODUCT, $3, $5);
       $$->set_name(token_name(sql_string, &@$));
     }
     ;

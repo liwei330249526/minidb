@@ -50,7 +50,6 @@ RC ExpressionIterator::iterate_child_expr(Expression &expr, function<RC(unique_p
     } break;
 
     case ExprType::ARITHMETIC: {
-
       auto &arithmetic_expr = static_cast<ArithmeticExpr &>(expr);
 //      rc = callback(arithmetic_expr.left());
 //      if (OB_SUCC(rc)) {
@@ -65,6 +64,20 @@ RC ExpressionIterator::iterate_child_expr(Expression &expr, function<RC(unique_p
 	        rc = callback(arithmetic_expr.right());
 	      }
 	    }
+
+    } break;
+    case ExprType::VECTORFUNCTION: {
+      // 向量
+      auto &vector_func_expr = static_cast<VectorFunctionExpr &>(expr);
+      if (vector_func_expr.left() != nullptr) {
+        rc = callback(vector_func_expr.left());
+      }
+
+      if (vector_func_expr.right() != nullptr) {
+        if (OB_SUCC(rc)) {
+          rc = callback(vector_func_expr.right());
+        }
+      }
 
     } break;
 

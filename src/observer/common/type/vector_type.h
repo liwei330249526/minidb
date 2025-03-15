@@ -25,8 +25,7 @@ public:
   int compare(const Value &left, const Value &right) const override;
   RC add(const Value &left, const Value &right, Value &result) const override;
   RC subtract(const Value &left, const Value &right, Value &result) const override;
-  RC dot(const Value &left, const Value &right, Value &result) const;
   RC multiply(const Value &left, const Value &right, Value &result) const override;
-
+  RC dot(const Value &left, const Value &right, Value &result) const;
   RC to_string(const Value &val, string &result) const override;
 };

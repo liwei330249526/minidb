@@ -115,9 +115,9 @@ public:
   float  get_float() const;
   string get_string() const;
   bool   get_boolean() const;
-  vector<float> get_vector() const;
+  const vector<float> get_vector() const;
 
-private:
+//private:   更方便一些
   void set_int(int val);
   void set_float(float val);
   void set_string(const char *s, int len = 0);

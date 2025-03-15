@@ -2345,7 +2345,7 @@ yyreduce:
   case 77: /* vector_function: L2_DISTANCE LBRACE expression COMMA expression RBRACE  */
 #line 652 "yacc_sql.y"
     {
-      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionType::L2_DISTANCE, (yyvsp[-3].expression), (yyvsp[-1].expression));
+      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::L2_DISTANCE, (yyvsp[-3].expression), (yyvsp[-1].expression));
       (yyval.vector_function_expr)->set_name(token_name(sql_string, &(yyloc)));
     }
 #line 2352 "yacc_sql.cpp"
@@ -2354,7 +2354,7 @@ yyreduce:
   case 78: /* vector_function: COSINE_DISTANCE LBRACE expression COMMA expression RBRACE  */
 #line 657 "yacc_sql.y"
     {
-      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionType::COSINE_DISTANCE, (yyvsp[-3].expression), (yyvsp[-1].expression));
+      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::COSINE_DISTANCE, (yyvsp[-3].expression), (yyvsp[-1].expression));
       (yyval.vector_function_expr)->set_name(token_name(sql_string, &(yyloc)));
     }
 #line 2361 "yacc_sql.cpp"
@@ -2363,7 +2363,7 @@ yyreduce:
   case 79: /* vector_function: INNER_PRODUCT LBRACE expression COMMA expression RBRACE  */
 #line 662 "yacc_sql.y"
     {
-      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionType::INNER_PRODUCT, (yyvsp[-3].expression), (yyvsp[-1].expression));
+      (yyval.vector_function_expr) = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::INNER_PRODUCT, (yyvsp[-3].expression), (yyvsp[-1].expression));
       (yyval.vector_function_expr)->set_name(token_name(sql_string, &(yyloc)));
     }
 #line 2370 "yacc_sql.cpp"

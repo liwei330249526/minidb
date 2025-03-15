@@ -359,7 +359,7 @@ bool Value::get_boolean() const
   return false;
 }
 // 返回 vector 数据
-vector<float> Value::get_vector() const {
+const vector<float> Value::get_vector() const {
   if (attr_type_ == AttrType::VECTORS ) {
     return *value_.vector_value_;
   } else if(attr_type_ == AttrType::CHARS) {

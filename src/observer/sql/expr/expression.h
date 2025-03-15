@@ -47,6 +47,7 @@ enum class ExprType
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
   AGGREGATION,  ///< 聚合运算
+  VECTORFUNCTION,  ///< 向量函数
 };
 
 /**
@@ -470,33 +471,42 @@ private:
   std::unique_ptr<Expression> child_;
 };
 
-enum VectorFunctionType {
-    L2_DISTANCE,
-    COSINE_DISTANCE,
-    INNER_PRODUCT
-};
-
-// 向量表达式
+// 向量函数表达式
 class VectorFunctionExpr : public Expression {
+public:
+    enum class VectorFunctionType
+    {
+        L2_DISTANCE,
+        COSINE_DISTANCE,
+        INNER_PRODUCT
+    };
+
 public:
     VectorFunctionExpr(VectorFunctionType type, Expression *left, Expression *right)
             : type_(type), left_(left), right_(right) {}
 
-    ~VectorFunctionExpr() {
-      if (left_ != nullptr) {
-        delete left_;
-      }
-      if (right_ != nullptr) {
-        delete right_;
-      }
-    }
+    // = default;：要求编译器生成一个默认的析构函数。默认析构函数会自动调用基类的析构函数（如果有基类的话），
+    // 以及成员对象的析构函数，按成员声明的逆序依次调用。
+    ~VectorFunctionExpr() = default;
 
-    VectorFunctionType type() const { return type_; }
-    const Expression *left() const { return left_; }
-    const Expression *right() const { return right_; }
+    ExprType type() const { return ExprType::VECTORFUNCTION; }
+    RC get_value(const Tuple &tuple, Value &value) const override;
+    AttrType value_type() const override { return AttrType::VECTORS; }
+    VectorFunctionType VectorFunction_type() const { return type_; }
+    std::unique_ptr<Expression> &left() { return left_; }
+    std::unique_ptr<Expression> &right() { return right_; }
+    // 计算l2_distance
+    float l2_distance(const std::vector<float>& A, const std::vector<float>& B) const;
+    // 计算cosine_distance
+    float cosine_distance(const std::vector<float>& A, const std::vector<float>& B) const;
+    // 计算inner_product
+    float inner_product(const std::vector<float>& A, const std::vector<float>& B) const;
+
+private:
+    RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;
 
 private:
     VectorFunctionType type_;
-    Expression *left_;
-    Expression *right_;
+    std::unique_ptr<Expression> left_;
+    std::unique_ptr<Expression> right_;
 };
