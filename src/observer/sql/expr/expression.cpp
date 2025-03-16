@@ -407,13 +407,21 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
 	  }
   }
 
+  if (arithmetic_type_ == Type::NEGATIVE) {
+    if (left_value.attr_type() == AttrType::NULLTYPE) {
+      value.reset();
+      return rc;
+    }
+  } else {
+    // 双目， 判断左右，如果有null， 则返回null
+    if (left_value.attr_type() == AttrType::NULLTYPE || right_value .attr_type() == AttrType::NULLTYPE) {
+      value.reset();
+      return rc;
+    }
+  }
 
   const AttrType target_type = value_type();
   value.set_type(target_type);
-  if (left_value.attr_type() == AttrType::NULLTYPE || right_value.attr_type() == AttrType::NULLTYPE) {
-    value = Value();
-    return rc;
-  }
 
   switch (arithmetic_type_) {
     case Type::ADD: {
