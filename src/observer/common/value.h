@@ -123,6 +123,7 @@ public:
   void set_float(float val);
   void set_string(const char *s, int len = 0);
   void set_string_from_other(const Value &other);
+  void set_vector_from_other(const Value &other);
 
 private:
   AttrType attr_type_ = AttrType::UNDEFINED; // 值类型

@@ -28,6 +28,7 @@ Value::Value(bool val) { set_boolean(val); }
 
 Value::Value(const char *s, int len /*= 0*/) { set_string(s, len); }
 
+// 拷贝
 Value::Value(const Value &other)
 {
   this->attr_type_ = other.attr_type_;
@@ -36,6 +37,9 @@ Value::Value(const Value &other)
   switch (this->attr_type_) {
     case AttrType::CHARS: {
       set_string_from_other(other);
+    } break;
+    case AttrType::VECTORS: {
+      set_vector_from_other(other);
     } break;
 
     default: {
@@ -60,7 +64,7 @@ Value::Value(vector<float> &val) {
   length_ = val.size() * sizeof(float);
   own_data_ = true;
 }
-
+// 赋值
 Value &Value::operator=(const Value &other)
 {
   if (this == &other) {
@@ -73,6 +77,9 @@ Value &Value::operator=(const Value &other)
   switch (this->attr_type_) {
     case AttrType::CHARS: {
       set_string_from_other(other);
+    } break;
+    case AttrType::VECTORS: {
+      set_vector_from_other(other);
     } break;
 
     default: {
@@ -232,6 +239,18 @@ void Value::set_string_from_other(const Value &other)
     memcpy(this->value_.pointer_value_, other.value_.pointer_value_, this->length_);
     this->value_.pointer_value_[this->length_] = '\0';
   }
+}
+
+void Value::set_vector_from_other(const Value &other)
+{
+  ASSERT(attr_type_ == AttrType::VECTORS, "attr type is not VECTORS");
+  if (own_data_ && other.value_.vector_value_ != nullptr && length_ != 0) {
+    attr_type_ = AttrType::VECTORS;
+    value_.vector_value_ = new vector<float>(other.length() / sizeof(float)); // 一个float 的数组指针, 数据长度为 lenght_字节
+    memcpy(this->value_.vector_value_->data(), other.value_.vector_value_->data(), other.length());
+  }
+
+
 }
 
 const char *Value::data() const

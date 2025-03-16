@@ -96,6 +96,9 @@ int CharType::cast_cost(AttrType type)
   } else if (type == AttrType::FLOATS) {
     // char 可以转换为 floats
     return 1;
+  } else if (type == AttrType::VECTORS) {  //   SELECT ID, C1 FROM TEST WHERE C2 = '[1,2,3]'; , 需要将varchar 转为 vector
+    // char 可以转换为 floats
+    return 1;
   }
 
   return INT32_MAX;
