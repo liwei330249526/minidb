@@ -344,8 +344,9 @@ RC Table::set_value_to_record(char *record_data, const Value &value, const Field
       copy_len = data_len + 1;
     }
   } else if (field->type() == AttrType::VECTORS) {
-    if (copy_len > data_len) {
-      copy_len = data_len;
+    if (copy_len != data_len) {
+      LOG_ERROR("insert vecotor type , values len= %d not eq filed len=", data_len, copy_len);
+      return RC::INVALID_ARGUMENT;
     }
   }
   memcpy(record_data + field->offset(), value.data(), copy_len);
