@@ -133,7 +133,7 @@ bool isMatch(const std::string& leftStr, const std::string& rightStr) {
 	// 处理 rightStr 以 '%' 开头的情况
 	for (int j = 1; j <= n; ++j) {
 		if (rightStr[j - 1] == '%') {
-			dp[0][j] = dp[0][j - 1];
+			dp[0][j] = dp[0][j - 1]; // 空字符串， 和 "%" 匹配,  "%" 匹配0个，则结果看 [0] --  [j-1]
 		}
 	}
 
@@ -141,10 +141,10 @@ bool isMatch(const std::string& leftStr, const std::string& rightStr) {
 	for (int i = 1; i <= m; ++i) {
 		for (int j = 1; j <= n; ++j) {
 			if (rightStr[j - 1] == '%') {
-				// '%' 可以匹配零个或多个字符
+				// '%' 可以匹配零个dp[i][j-1]  或dp[i-1][j] 多个字符
 				dp[i][j] = dp[i][j - 1] || dp[i - 1][j];
 			} else if (rightStr[j - 1] == '_' || leftStr[i - 1] == rightStr[j - 1]) {
-				// '_' 匹配一个任意字符，或者字符相等
+				// '_' 匹配一个任意字符，或者字符相等;  则忽略相等的元素 dp[i-1][j-1]
 				dp[i][j] = dp[i - 1][j - 1];
 			}
 		}
@@ -773,7 +773,7 @@ RC VectorFunctionExpr::calc_value(const Value &left_value, const Value &right_va
 //遍历向量 A 和 B 的每个元素，计算对应元素差值的平方并累加。
 //最后对累加和取平方根，得到欧氏距离。
 float VectorFunctionExpr::l2_distance(const vector<float> &A, const vector<float> &B) const {
-  double sum = 0.0;
+  float sum = 0.0;
   for (size_t i = 0; i < A.size(); ++i) {
     sum += std::pow(A[i] - B[i], 2);
   }
@@ -784,9 +784,9 @@ float VectorFunctionExpr::l2_distance(const vector<float> &A, const vector<float
 //先计算向量 A 和 B 的点积、A 的模和 B 的模。
 //再根据余弦距离公式计算并返回结果。
 float VectorFunctionExpr::cosine_distance(const vector<float> &A, const vector<float> &B) const {
-  double dot_product = 0.0;
-  double norm_A = 0.0;
-  double norm_B = 0.0;
+  float dot_product = 0.0;
+  float norm_A = 0.0;
+  float norm_B = 0.0;
   for (size_t i = 0; i < A.size(); ++i) {
     dot_product += A[i] * B[i];
     norm_A += std::pow(A[i], 2);
@@ -800,7 +800,7 @@ float VectorFunctionExpr::cosine_distance(const vector<float> &A, const vector<f
 //inner_product 函数：
 //遍历向量 A 和 B 的每个元素，计算对应元素的乘积并累加，得到内积。
 float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<float> &B) const {
-  double result = 0.0;
+  float result = 0.0;
   for (size_t i = 0; i < A.size(); ++i) {
     result += A[i] * B[i];
   }
