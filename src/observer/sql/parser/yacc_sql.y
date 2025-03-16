@@ -151,8 +151,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
 }
 
-%token <number> NUMBER
-%token <floats> FLOAT
+%token <number> NUMBER    // 整数
+%token <floats> FLOAT     // 浮点 %token <floats> FLOAT 就是对 FLOAT 词法单元的声明，其中 <floats> 表示该词法单元的语义值类型为 floats（对应你在 %union 中定义的 floats 成员）。
 %token <string> ID
 %token <string> SSS
 //非终结符
@@ -167,7 +167,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
-%type <value_list>          value_list
+// %type <value_list>          value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <string>              storage_format
@@ -386,36 +386,57 @@ type:
     | VECTOR_T { $$ = static_cast<int>(AttrType::VECTORS); }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
-    INSERT INTO ID VALUES LBRACE value value_list RBRACE 
+//    INSERT INTO ID VALUES LBRACE value value_list RBRACE
+//    {
+//      $$ = new ParsedSqlNode(SCF_INSERT);
+//      $$->insertion.relation_name = $3;  // 表名
+//      if ($7 != nullptr) {  // 列表不为空
+//        $$->insertion.values.swap(*$7);
+//        delete $7;
+//      }
+//      $$->insertion.values.emplace_back(*$6); // 加上一个值
+//      std::reverse($$->insertion.values.begin(), $$->insertion.values.end()); // 翻转
+//      delete $6;
+//      free($3);
+//    }
+//    ;
+    INSERT INTO ID VALUES LBRACE expression_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_INSERT);
       $$->insertion.relation_name = $3;
-      if ($7 != nullptr) {
-        $$->insertion.values.swap(*$7);
-        delete $7;
+
+//      if ($7 != nullptr) {
+//        $$->insertion.values.swap(*$7);
+//        delete $7;
+//      }
+//      $$->insertion.values.emplace_back(*$6);
+//      std::reverse($$->insertion.values.begin(), $$->insertion.values.end());
+//      delete $6;
+
+      if ($6 != nullptr) {
+        $$->insertion.expressions.swap(*$6);  // expression 表达式
+        delete $6;
       }
-      $$->insertion.values.emplace_back(*$6);
-      std::reverse($$->insertion.values.begin(), $$->insertion.values.end());
-      delete $6;
+
       free($3);
     }
     ;
 
-value_list:
-    /* empty */
-    {
-      $$ = nullptr;
-    }
-    | COMMA value value_list  { 
-      if ($3 != nullptr) {
-        $$ = $3;
-      } else {
-        $$ = new std::vector<Value>;
-      }
-      $$->emplace_back(*$2);
-      delete $2;
-    }
-    ;
+// value_list:
+//     /* empty */
+//     {
+//       $$ = nullptr;
+//     }
+//     | COMMA value value_list  {
+//       if ($3 != nullptr) {
+//         $$ = $3;
+//       } else {
+//         $$ = new std::vector<Value>;
+//       }
+//       $$->emplace_back(*$2);
+//       delete $2;
+//     }
+//     ;
 value:
     NUMBER {
       $$ = new Value((int)$1);
