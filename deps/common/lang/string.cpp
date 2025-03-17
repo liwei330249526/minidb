@@ -281,4 +281,24 @@ string double_to_str(double v)
 
   return string(buf, len);
 }
+
+std::string float_to_str(float v) {
+  // 定义一个足够大的字符数组来存储转换后的字符串
+  char buf[256];
+  // 使用 snprintf 函数将 float 类型的数转换为字符串，保留两位小数
+  snprintf(buf, sizeof(buf), "%.2f", v);
+  // 获取字符串的长度
+  size_t len = strlen(buf);
+  // 循环去除字符串末尾多余的 '0'
+  while (buf[len - 1] == '0') {
+    len--;
+  }
+  // 如果去除 '0' 后末尾是小数点，也将其去除
+  if (buf[len - 1] == '.') {
+    len--;
+  }
+  // 使用 string 的构造函数，根据处理后的长度构造字符串并返回
+  return std::string(buf, len);
+}
+
 }  // namespace common

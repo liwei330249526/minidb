@@ -130,7 +130,7 @@ RC VectorType::to_string(const Value &val, string &result) const {
   ss << "[";
   for (size_t i = 0; i < vec.size(); ++i) {
     float v = vec[i];
-    ss << common::double_to_str(v);
+    ss << common::float_to_str(v);
     if (i != vec.size()-1) {
       ss << ",";
     }
