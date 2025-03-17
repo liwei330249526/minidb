@@ -82,6 +82,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         UPDATE
         LBRACE
         RBRACE
+        LSQBRACE
+        RSQBRACE
         COMMA
         TRX_BEGIN
         TRX_COMMIT
@@ -149,6 +151,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   int                                        number;
   float                                      floats;
   VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
+  std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
 }
 
 %token <number> NUMBER    // 整数
@@ -180,6 +183,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
 %type <join_node_list>      join_list      // join 链表
 %type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
+%type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -446,11 +450,47 @@ value:
       $$ = new Value((float)$1);
       @$ = @1;
     }
+    | LSQBRACE vector_literal RSQBRACE   // 向量值
+    {
+      $$ = new Value(*$2);  // 通过一个std::vector  [1.5,2.3,3.3]， 构造一个向量类型的 Value
+      delete($2);
+    }
     |SSS {
       char *tmp = common::substr($1,1,strlen($1)-2);
       $$ = new Value(tmp);
       free(tmp);
       free($1);
+    }
+    ;
+
+vector_literal:
+    NUMBER {
+      $$ = new std::vector<float>;
+      $$->push_back(static_cast<float>$1);
+    }
+    |
+    FLOAT
+    {
+      $$ = new std::vector<float>;
+      $$->push_back($1);
+    }
+    | FLOAT COMMA vector_literal
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<float>;
+      }
+      $$->insert($$->begin(), $1);
+    }
+    | NUMBER COMMA vector_literal
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<float>;
+      }
+      $$->insert($$->begin(), static_cast<float>$1);
     }
     ;
 storage_format:
@@ -596,7 +636,7 @@ calc_stmt:
 expression_list:
     expression
     {
-      $$ = new std::vector<std::unique_ptr<Expression>>;
+      $$ = new std::vector<std::unique_ptr<Expression>>; // 给Vector
       $$->emplace_back($1);
     }
     | expression COMMA expression_list
@@ -634,6 +674,11 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
+//    | vector_literal {  // 根据向量 vector 的 Value  构造一个 ValueExpr
+//        $$ = new ValueExpr(*$1);
+//        $$->set_name(token_name(sql_string, &@$));
+//        delete $1;
+//    }
     | rel_attr {
       RelAttrSqlNode *node = $1;
       $$ = new UnboundFieldExpr(node->relation_name, node->attribute_name);
@@ -732,7 +777,7 @@ rel_list:       // 用于表示 表名列表; rel_list 是一个非终结符，�
     ;
 
 where:
-    /* empty */
+    /* empty */   // where 可有可无
     {
       $$ = nullptr;
     }

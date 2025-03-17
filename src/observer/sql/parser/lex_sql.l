@@ -137,6 +137,8 @@ INNER_PRODUCT                           RETURN_TOKEN(INNER_PRODUCT);  // 向量�
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);
 ")"                                     RETURN_TOKEN(RBRACE);
+"["                                     RETURN_TOKEN(LSQBRACE);  // 中括号， 支持向量 [1.5,2.3,3.3]
+"]"                                     RETURN_TOKEN(RSQBRACE);  // 中括号， 支持向量
 
 ","                                     RETURN_TOKEN(COMMA);
 "="                                     RETURN_TOKEN(EQ);
