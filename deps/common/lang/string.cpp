@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "common/lang/algorithm.h"
 #include "common/lang/iomanip.h"
+#include <cmath>
 
 namespace common {
 
@@ -270,7 +271,8 @@ char *substr(const char *s, int n1, int n2)
 string double_to_str(double v)
 {
   char buf[256];
-  snprintf(buf, sizeof(buf), "%.2f", v);
+  double rounded = std::round(v * 100) / 100;
+  snprintf(buf, sizeof(buf), "%.2f", rounded);
   size_t len = strlen(buf);
   while (buf[len - 1] == '0') {
     len--;
@@ -281,12 +283,14 @@ string double_to_str(double v)
 
   return string(buf, len);
 }
-
+// 1.675 -- > 1.67499995
 std::string float_to_str(float v) {
   // 定义一个足够大的字符数组来存储转换后的字符串
   char buf[256];
+  // 使用 std::round 对浮点数进行四舍五入，保留两位小数
+  float rounded = std::round(v * 100) / 100;
   // 使用 snprintf 函数将 float 类型的数转换为字符串，保留两位小数
-  snprintf(buf, sizeof(buf), "%.2f", v);
+  snprintf(buf, sizeof(buf), "%.2f", rounded);
   // 获取字符串的长度
   size_t len = strlen(buf);
   // 循环去除字符串末尾多余的 '0'
