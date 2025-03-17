@@ -235,7 +235,8 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       return rc;
     }
   }
-
+  // 上面是返回元数据
+  // 下面是返回数据
   rc = RC::SUCCESS;
   if (event->session()->get_execution_mode() == ExecutionMode::CHUNK_ITERATOR
       && event->session()->used_chunk_mode()) {

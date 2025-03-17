@@ -53,7 +53,7 @@ public:
 
 private:
   Session                          *session_ = nullptr;  ///< 当前所属会话
-  std::unique_ptr<PhysicalOperator> operator_;           ///< 执行计划
+  std::unique_ptr<PhysicalOperator> operator_;           ///< 执行计划  ,  如果是聚合的话，这个 operator_ 可能是scarlar_group
   TupleSchema                       tuple_schema_;       ///< 返回的表头信息。可能有也可能没有
   RC                                return_code_ = RC::SUCCESS;
   std::string                       state_string_;

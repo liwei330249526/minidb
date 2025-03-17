@@ -32,6 +32,8 @@ protected:
 class SumAggregator : public Aggregator
 {
 public:
+//	SumAggregator();
+	virtual ~SumAggregator() = default;
   RC accumulate(const Value &value) override;
   RC evaluate(Value &result) override;
 };
@@ -39,6 +41,8 @@ public:
 class CountAggregator : public Aggregator
 {
 public:
+		CountAggregator();
+		virtual ~CountAggregator() = default;
 		RC accumulate(const Value &value) override;
 		RC evaluate(Value &result) override;
 };

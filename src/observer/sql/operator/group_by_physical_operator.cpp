@@ -42,7 +42,7 @@ void GroupByPhysicalOperator::create_aggregator_list(AggregatorList &aggregator_
     aggregator_list.emplace_back(aggregate_expr->create_aggregator());
   });
 }
-
+// 参数aggregator_list 是聚合算子，例如count;  参数 tuple 是要聚合那一列，和一行数据
 RC GroupByPhysicalOperator::aggregate(AggregatorList &aggregator_list, const Tuple &tuple)
 {
   ASSERT(static_cast<int>(aggregator_list.size()) == tuple.cell_num(), 
@@ -54,7 +54,7 @@ RC GroupByPhysicalOperator::aggregate(AggregatorList &aggregator_list, const Tup
   const int size = static_cast<int>(aggregator_list.size());
   for (int i = 0; i < size; i++) {
     Aggregator *aggregator = aggregator_list[i].get();
-
+    // 获取第0个表达式的值
     rc = tuple.cell_at(i, value);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to get value from expression. rc=%s", strrc(rc));
@@ -95,8 +95,8 @@ RC GroupByPhysicalOperator::evaluate(GroupValueType &group_value)
     values.emplace_back(value);
   }
 
-  evaluated_tuple.set_cells(values);
-  evaluated_tuple.set_names(aggregator_names);
+  evaluated_tuple.set_cells(values);  // 值
+  evaluated_tuple.set_names(aggregator_names); // 名字
 
   composite_value_tuple.add_tuple(make_unique<ValueListTuple>(std::move(evaluated_tuple)));
 

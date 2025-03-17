@@ -35,12 +35,12 @@ RC ScalarGroupByPhysicalOperator::open(Trx *trx)
     return rc;
   }
 
-  ExpressionTuple<Expression *> group_value_expression_tuple(value_expressions_);
+  ExpressionTuple<Expression *> group_value_expression_tuple(value_expressions_); // value_expressions_  要聚合那一列
 
   ValueListTuple group_by_evaluated_tuple;
 
-  while (OB_SUCC(rc = child.next())) {
-    Tuple *child_tuple = child.current_tuple();
+  while (OB_SUCC(rc = child.next())) { // scan 算子， 一行数据
+    Tuple *child_tuple = child.current_tuple(); // 一行数据
     if (nullptr == child_tuple) {
       LOG_WARN("failed to get tuple from child operator. rc=%s", strrc(rc));
       return RC::INTERNAL;
@@ -52,10 +52,10 @@ RC ScalarGroupByPhysicalOperator::open(Trx *trx)
     // 计算聚合值
     if (group_value_ == nullptr) {
       AggregatorList aggregator_list;
-      create_aggregator_list(aggregator_list);
+      create_aggregator_list(aggregator_list); // 聚合表达式列表
 
       ValueListTuple child_tuple_to_value;
-      rc = ValueListTuple::make(*child_tuple, child_tuple_to_value);
+      rc = ValueListTuple::make(*child_tuple, child_tuple_to_value); // 获取值列表
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to make tuple to value list. rc=%s", strrc(rc));
         return rc;
@@ -63,7 +63,7 @@ RC ScalarGroupByPhysicalOperator::open(Trx *trx)
 
       CompositeTuple composite_tuple;
       composite_tuple.add_tuple(make_unique<ValueListTuple>(std::move(child_tuple_to_value)));
-      group_value_ = make_unique<GroupValueType>(std::move(aggregator_list), std::move(composite_tuple));
+      group_value_ = make_unique<GroupValueType>(std::move(aggregator_list), std::move(composite_tuple)); // 聚合算子和， 聚合的一行值列表
     }
     
     rc = aggregate(get<0>(*group_value_), group_value_expression_tuple);
@@ -84,6 +84,13 @@ RC ScalarGroupByPhysicalOperator::open(Trx *trx)
 
   // 得到最终聚合后的值
   if (group_value_) {
+    rc = evaluate(*group_value_);
+  } else {
+    //没有数据， 则组合一个结果集，是filed 中类型的0 值
+    CompositeTuple composite_tuple;
+    AggregatorList aggregator_list;
+    create_aggregator_list(aggregator_list); // 聚合表达式列表
+    group_value_ = make_unique<GroupValueType>(std::move(aggregator_list), std::move(composite_tuple));
     rc = evaluate(*group_value_);
   }
 
@@ -115,5 +122,5 @@ Tuple *ScalarGroupByPhysicalOperator::current_tuple()
     return nullptr;
   }
 
-  return &get<1>(*group_value_);
+  return &get<1>(*group_value_);  // 返回结果集
 }

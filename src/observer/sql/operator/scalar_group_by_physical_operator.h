@@ -35,6 +35,6 @@ public:
   Tuple *current_tuple() override;
 
 private:
-  std::unique_ptr<GroupValueType> group_value_;
+  std::unique_ptr<GroupValueType> group_value_;  // 聚合结果集在这里,例如 count(id): value
   bool                            emitted_ = false;  /// 标识是否已经输出过
 };

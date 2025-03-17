@@ -184,7 +184,7 @@ public:
     this->speces_.clear();
     this->speces_.reserve(fields->size());
     for (const FieldMeta &field : *fields) {
-      speces_.push_back(new FieldExpr(table, &field));
+      speces_.push_back(new FieldExpr(table, &field));   // FieldExpr(table, &field) 传入两个指针，数据在外部
     }
   }
 
