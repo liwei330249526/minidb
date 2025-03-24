@@ -298,7 +298,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
         sql_result->close();
         return rc;
       }
-
+      // 读取的每个值，str
       string cell_str = value.to_string();
 
       rc = writer_->writen(cell_str.data(), cell_str.size());

@@ -452,7 +452,7 @@ value:
     }
     | LSQBRACE vector_literal RSQBRACE   // 向量值
     {
-      $$ = new Value(*$2);  // 通过一个std::vector  [1.5,2.3,3.3]， 构造一个向量类型的 Value
+      $$ = new Value(*$2);  // 通过一个std::vector  [1.5,2.3,3.3]，Value构造函数接受一个std::vector 构造一个向量类型的 Value
       delete($2);
     }
     |SSS {
@@ -464,17 +464,17 @@ value:
     ;
 
 vector_literal:
-    NUMBER {
+    NUMBER {   // 向量 vector 支持整数，
       $$ = new std::vector<float>;
       $$->push_back(static_cast<float>$1);
     }
     |
-    FLOAT
+    FLOAT      // 支持浮点数
     {
       $$ = new std::vector<float>;
       $$->push_back($1);
     }
-    | FLOAT COMMA vector_literal
+    | FLOAT COMMA vector_literal  // 递归，多浮点数
     {
       if ($3 != nullptr) {
         $$ = $3;
@@ -483,7 +483,7 @@ vector_literal:
       }
       $$->insert($$->begin(), $1);
     }
-    | NUMBER COMMA vector_literal
+    | NUMBER COMMA vector_literal // 递归，多整数
     {
       if ($3 != nullptr) {
         $$ = $3;

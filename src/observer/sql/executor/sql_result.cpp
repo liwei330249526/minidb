@@ -60,6 +60,7 @@ RC SqlResult::close()
 
 RC SqlResult::next_tuple(Tuple *&tuple)
 {
+  // 读取数据就ok
   RC rc = operator_->next();
   if (rc != RC::SUCCESS) {
     return rc;

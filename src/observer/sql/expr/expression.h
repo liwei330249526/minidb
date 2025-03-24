@@ -32,6 +32,7 @@ class Tuple;
 /**
  * @brief 表达式类型
  * @ingroup Expression
+ * 子查询表达式类型应该也在这里
  */
 enum class ExprType
 {
@@ -471,7 +472,8 @@ private:
   std::unique_ptr<Expression> child_;
 };
 
-// 向量函数表达式
+// 向量函数表达式， yacc  L2_DISTANCE LBRACE expression COMMA expression RBRACE
+// yacc 语法判断后，直接生成了这个 VectorFunctionExpr 对象
 class VectorFunctionExpr : public Expression {
 public:
     enum class VectorFunctionType
