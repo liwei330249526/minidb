@@ -95,6 +95,10 @@ RC ExpressionBinder::bind_expression(unique_ptr<Expression> &expr, vector<unique
     case ExprType::VECTORFUNCTION: {
       return bind_vectorfunc_expression(expr, bound_expressions);
     } break;
+    case ExprType::SUBSELECT: {
+      return bind_sub_select_expression(expr, bound_expressions);
+    } break;
+
 
     default: {
       LOG_WARN("unknown expression type: %d", static_cast<int>(expr->type()));
@@ -517,5 +521,28 @@ RC ExpressionBinder::bind_vectorfunc_expression(unique_ptr<Expression> &expr,
   }
 
   bound_expressions.emplace_back(std::move(expr));
+  return RC::SUCCESS;
+}
+
+// 绑定子查询 sub select 函数
+RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
+                                                vector<std::unique_ptr<Expression>> &bound_expressions) {
+  RC rc = RC::SUCCESS;
+  if (nullptr == expr) {
+    return RC::SUCCESS;
+  }
+  // 如果是子查询, 则递归create stmt
+  if (expr->type() == ExprType::SUBSELECT) {
+    SubqueryExpr &sub_sql = reinterpret_cast<SubqueryExpr &>(*expr);
+    Stmt          *stmt     = nullptr;
+    rc = Stmt::create_stmt(context_.getDb(), *(sub_sql.get_sub_parser_node()), stmt); // 递归调用，对子查询生成抽象语法树
+    if (rc != RC::SUCCESS && rc != RC::UNIMPLEMENTED) {
+      LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
+      return rc;
+    }
+    sub_sql.exp_select_ = dynamic_cast<SelectStmt *>(stmt);  // 子查询
+    bound_expressions.emplace_back(std::move(expr));
+  }
+
   return RC::SUCCESS;
 }

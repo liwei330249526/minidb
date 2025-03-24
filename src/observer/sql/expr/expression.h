@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <memory>
 #include <string>
+#include <src/observer/sql/stmt/select_stmt.h>
 
 #include "common/value.h"
 #include "storage/field/field.h"
@@ -513,7 +514,7 @@ private:
     std::unique_ptr<Expression> left_;
     std::unique_ptr<Expression> right_;
 };
-
+// 表达式， 解析node
 class SubqueryExpr : public Expression {
 public:
     SubqueryExpr(ParsedSqlNode *select_stmt)
@@ -525,15 +526,18 @@ public:
       if (subSel_ != nullptr) {
         delete subSel_;
       }
+      if (exp_select_ != nullptr) {
+        delete exp_select_;
+      }
     }
     ExprType type() const override { return ExprType::SUBSELECT; }
     RC get_value(const Tuple &tuple, Value &value) const override;
     AttrType value_type() const override;
 
-    ParsedSqlNode *select_stmt() const { return subSel_; }
+    ParsedSqlNode *get_sub_parser_node() const { return subSel_; }
 
+    SelectStmt *exp_select_;
 private:
-//    Expression *subSel_;
     ParsedSqlNode * subSel_;
     // 子查询的 SELECT 语句
 };

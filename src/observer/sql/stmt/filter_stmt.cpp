@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/rc.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
+#include "select_stmt.h"
 
 FilterStmt::~FilterStmt()
 {
@@ -160,7 +161,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 	  ExpressionBinder expression_binder(binder_context);
 	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
 	  unique_ptr<Expression> right_expr(condition.right_expression);
-	  RC rc = expression_binder.bind_expression(right_expr, bound_expressions);
+	  rc = expression_binder.bind_expression(right_expr, bound_expressions);
 	  if (OB_FAIL(rc)) {
 		  LOG_INFO("bind expression failed. rc=%s", strrc(rc));
 		  return rc;
@@ -174,4 +175,6 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   // 检查两个类型是否能够比较
   return rc;
 }
+
+
 

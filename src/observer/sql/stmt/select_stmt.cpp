@@ -30,8 +30,8 @@ SelectStmt::~SelectStmt()
     filter_stmt_ = nullptr;
   }
   if (nullptr != sub_sel_) {
-    delete filter_stmt_;
-    filter_stmt_ = nullptr;
+    delete sub_sel_;
+    sub_sel_ = nullptr;
   }
 }
 
@@ -45,6 +45,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   }
 
   BinderContext binder_context;
+  binder_context.setDb(db);
   SelectStmt *select_stmt = new SelectStmt();
 
   // collect tables in `from` statement
@@ -73,18 +74,6 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   ExpressionBinder expression_binder(binder_context);
   // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
   for (unique_ptr<Expression> &expression : select_sql.expressions) {
-    if (expression->type() == ExprType::SUBSELECT) {
-      ParsedSqlNode &sub_sql_node = reinterpret_cast<ParsedSqlNode &>(*expression);
-      Stmt          *stmt     = nullptr;
-      rc = Stmt::create_stmt(db, sub_sql_node, stmt); // 递归调用，对子查询生成抽象语法树
-      if (rc != RC::SUCCESS && rc != RC::UNIMPLEMENTED) {
-        LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
-        return rc;
-      }
-      select_stmt->sub_sel_ = dynamic_cast<SelectStmt *>(stmt);  // 子查询
-      continue;
-    }
-
     rc = expression_binder.bind_expression(expression, bound_expressions);
     if (OB_FAIL(rc)) {
       LOG_INFO("bind expression failed. rc=%s", strrc(rc));
