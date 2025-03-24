@@ -806,3 +806,11 @@ float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<flo
   }
   return result;
 }
+
+RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
+  return RC::RECORD_EOF;
+}
+
+AttrType SubqueryExpr::value_type() const {
+  return AttrType::VECTORS;
+}

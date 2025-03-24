@@ -119,11 +119,13 @@ extern int yydebug;
     L2_DISTANCE = 320,             /* L2_DISTANCE  */
     COSINE_DISTANCE = 321,         /* COSINE_DISTANCE  */
     INNER_PRODUCT = 322,           /* INNER_PRODUCT  */
-    NUMBER = 323,                  /* NUMBER  */
-    FLOAT = 324,                   /* FLOAT  */
-    ID = 325,                      /* ID  */
-    SSS = 326,                     /* SSS  */
-    UMINUS = 327                   /* UMINUS  */
+    IN = 323,                      /* IN  */
+    EXISTS = 324,                  /* EXISTS  */
+    NUMBER = 325,                  /* NUMBER  */
+    FLOAT = 326,                   /* FLOAT  */
+    ID = 327,                      /* ID  */
+    SSS = 328,                     /* SSS  */
+    UMINUS = 329                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -132,7 +134,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 134 "yacc_sql.y"
+#line 136 "yacc_sql.y"
    // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
@@ -154,8 +156,9 @@ union YYSTYPE
   float                                      floats;
   VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
   std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
+  SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
 
-#line 159 "yacc_sql.hpp"
+#line 162 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

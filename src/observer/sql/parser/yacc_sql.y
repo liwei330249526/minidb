@@ -129,6 +129,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         L2_DISTANCE  // 向量函数距离表达式 欧几里得距离
         COSINE_DISTANCE // 向量函数距离表达式 余弦距离
         INNER_PRODUCT // 向量函数距离表达式  内积
+        IN
+        EXISTS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
@@ -152,6 +154,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   float                                      floats;
   VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
   std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
+  SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
 }
 
 %token <number> NUMBER    // 整数
@@ -184,6 +187,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <join_node_list>      join_list      // join 链表
 %type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
 %type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
+%type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -593,6 +597,13 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
    }
     ;
+subquery:
+    LBRACE select_stmt RBRACE
+    {
+      $$ = new SubqueryExpr($2);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    ;
 join_list:
     /* empty */  // 空规则， null
     {
@@ -711,6 +722,9 @@ expression:
     | vector_function {  // 新增：支持向量函数
       $$ = $1;
     }
+    | subquery {
+      $$ = $1;
+    }
     // your code here
     ;
 vector_function:
@@ -810,6 +824,14 @@ condition:
       $$->right_is_attr = 2;   // 右边是表达式
       $$->right_expression = $3;
       $$->comp = $2;
+    }
+    | comp_op expression {
+//       $$ = new ConditionSqlNode;
+//       $$->left_is_attr = 2;    // 左边是表达式
+//       $$->left_expression = $1;
+      $$->right_is_attr = 2;   // 右边是表达式
+      $$->right_expression = $2;
+      $$->comp = $1;
     }
     ;
 //    |
@@ -913,6 +935,8 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
     | NOT LIKE { $$ = NOT_LIKE_OP; }
+    | IN { $$ = IN_OP; }
+    | NOT IN { $$ = NOT_IN_OP; }
     ;
 
 // your code here

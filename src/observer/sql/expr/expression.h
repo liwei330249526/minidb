@@ -49,6 +49,7 @@ enum class ExprType
   ARITHMETIC,   ///< 算术运算
   AGGREGATION,  ///< 聚合运算
   VECTORFUNCTION,  ///< 向量函数
+  SUBSELECT,      // 子查询
 };
 
 /**
@@ -511,4 +512,28 @@ private:
     VectorFunctionType type_;
     std::unique_ptr<Expression> left_;
     std::unique_ptr<Expression> right_;
+};
+
+class SubqueryExpr : public Expression {
+public:
+    SubqueryExpr(ParsedSqlNode *select_stmt)
+            : subSel_(select_stmt) {}
+//    SubqueryExpr(ParsedSqlNode *select_stmt)
+//            : subSel_(select_stmt) {}
+
+    ~SubqueryExpr() {
+      if (subSel_ != nullptr) {
+        delete subSel_;
+      }
+    }
+    ExprType type() const override { return ExprType::SUBSELECT; }
+    RC get_value(const Tuple &tuple, Value &value) const override;
+    AttrType value_type() const override;
+
+    ParsedSqlNode *select_stmt() const { return subSel_; }
+
+private:
+//    Expression *subSel_;
+    ParsedSqlNode * subSel_;
+    // 子查询的 SELECT 语句
 };

@@ -129,6 +129,8 @@ STORAGE                                 RETURN_TOKEN(STORAGE);
 FORMAT                                  RETURN_TOKEN(FORMAT);
 LIKE                                    RETURN_TOKEN(LIKE);  // 添加 LIKE 关键字识别
 NOT                                     RETURN_TOKEN(NOT);   // 添加 NOT 关键字识别
+IN                                      RETURN_TOKEN(IN);
+EXISTS                                  RETURN_TOKEN(EXISTS);
 %                                       RETURN_TOKEN(PERCENT);  // 添加 % 通配符识别
 _                                       RETURN_TOKEN(UNDERSCORE);  // 添加 _ 通配符识别
 L2_DISTANCE                             RETURN_TOKEN(L2_DISTANCE);  // 向量函数距离表达式 欧几里得距离

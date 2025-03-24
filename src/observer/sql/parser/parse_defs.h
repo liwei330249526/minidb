@@ -22,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 
 class Expression;
 class VectorFunctionExpr;
+class SubqueryExpr;
 
 /**
  * @defgroup SQLParser SQL Parser
@@ -54,6 +55,10 @@ enum CompOp
   GREAT_THAN,   ///< ">"
   LIKE_OP,  // 添加 LIKE_OP 枚举值
 	NOT_LIKE_OP,  // NOT LIKE 操作
+	IN_OP,
+	NOT_IN_OP,
+	EXISTS_OP,
+	NOT_EXISTS_OP,
   NO_OP
 };
 

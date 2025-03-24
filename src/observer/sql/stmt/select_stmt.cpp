@@ -29,16 +29,23 @@ SelectStmt::~SelectStmt()
     delete filter_stmt_;
     filter_stmt_ = nullptr;
   }
+  if (nullptr != sub_sel_) {
+    delete filter_stmt_;
+    filter_stmt_ = nullptr;
+  }
 }
 
 RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 {
+  RC            rc            = RC::SUCCESS;
+
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
     return RC::INVALID_ARGUMENT;
   }
 
   BinderContext binder_context;
+  SelectStmt *select_stmt = new SelectStmt();
 
   // collect tables in `from` statement
   vector<Table *>                tables;
@@ -66,7 +73,19 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   ExpressionBinder expression_binder(binder_context);
   // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
   for (unique_ptr<Expression> &expression : select_sql.expressions) {
-    RC rc = expression_binder.bind_expression(expression, bound_expressions);
+    if (expression->type() == ExprType::SUBSELECT) {
+      ParsedSqlNode &sub_sql_node = reinterpret_cast<ParsedSqlNode &>(*expression);
+      Stmt          *stmt     = nullptr;
+      rc = Stmt::create_stmt(db, sub_sql_node, stmt); // 递归调用，对子查询生成抽象语法树
+      if (rc != RC::SUCCESS && rc != RC::UNIMPLEMENTED) {
+        LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
+        return rc;
+      }
+      select_stmt->sub_sel_ = dynamic_cast<SelectStmt *>(stmt);  // 子查询
+      continue;
+    }
+
+    rc = expression_binder.bind_expression(expression, bound_expressions);
     if (OB_FAIL(rc)) {
       LOG_INFO("bind expression failed. rc=%s", strrc(rc));
       return rc;
@@ -75,7 +94,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
 
   vector<unique_ptr<Expression>> group_by_expressions;
   for (unique_ptr<Expression> &expression : select_sql.group_by) {
-    RC rc = expression_binder.bind_expression(expression, group_by_expressions);
+    rc = expression_binder.bind_expression(expression, group_by_expressions);
     if (OB_FAIL(rc)) {
       LOG_INFO("bind expression failed. rc=%s", strrc(rc));
       return rc;
@@ -95,7 +114,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   }
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
-  RC          rc          = FilterStmt::create(db,
+  rc          = FilterStmt::create(db,
       default_table,
       &table_map,
       select_sql.conditions.data(),
@@ -106,8 +125,9 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     return rc;
   }
 
+
   // everything alright
-  SelectStmt *select_stmt = new SelectStmt();
+//  SelectStmt *select_stmt = new SelectStmt();
 
   select_stmt->tables_.swap(tables);
   select_stmt->query_expressions_.swap(bound_expressions); // 替换未绑定的表达式

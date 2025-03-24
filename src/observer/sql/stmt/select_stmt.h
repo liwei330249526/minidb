@@ -53,4 +53,5 @@ private:
   std::vector<Table *>                     tables_;
   FilterStmt                              *filter_stmt_ = nullptr;
   std::vector<std::unique_ptr<Expression>> group_by_;
+  SelectStmt* sub_sel_; // 子查询
 };
