@@ -112,7 +112,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     } else {
     	// 后续的表作为join 表, 构造了 join_oper
     	// 创建了 join 的逻辑计划, join 逻辑算子, join 表是一个 TableGet 算子， 共同加入一个 Join 算子
-      JoinLogicalOperator *join_oper = new JoinLogicalOperator;
+      JoinLogicalOperator *join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
@@ -138,7 +138,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right);
       unique_ptr<LogicalOperator> sub_oper;
       create_plan(sub_sql->getExpSelect(), sub_oper);
-      JoinLogicalOperator *join_oper = new JoinLogicalOperator;
+      JoinLogicalOperator *join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(sub_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);

@@ -245,19 +245,43 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
 {
   Value left_value;
   Value right_value;
+  bool bool_value = false;
+
+  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple);
+  if (comp_ == IN_OP || comp_ == NOT_IN_OP) {
+    if (comp_ == IN_OP) {
+      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
+        // left 在 right 子查询中
+        bool_value = true;
+      } else {
+        // left 不在 right 子查询中
+        bool_value = false;
+      }
+    } else if (comp_ == NOT_IN_OP) {
+      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
+        // left 在 right 子查询中
+        bool_value = false;
+
+      } else {
+        // left 不在 right 子查询中
+        bool_value = true;
+      }
+    }
+    value.set_boolean(bool_value);
+    return RC::SUCCESS;
+  }
 
   RC rc = left_->get_value(tuple, left_value); // 左边是表达式
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
+
   rc = right_->get_value(tuple, right_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
     return rc;
   }
-
-  bool bool_value = false;
 
   rc = compare_value(left_value, right_value, bool_value);
   if (rc == RC::SUCCESS) {

@@ -88,6 +88,9 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
     case LogicalOperatorType::JOIN: {
       return create_plan(static_cast<JoinLogicalOperator &>(logical_operator), oper);
     } break;
+    case LogicalOperatorType::HashSemiJoin: {
+      return create_plan(static_cast<JoinLogicalOperator &>(logical_operator), oper);
+    } break;
 
     case LogicalOperatorType::GROUP_BY: {
       return create_plan(static_cast<GroupByLogicalOperator &>(logical_operator), oper);
@@ -340,7 +343,14 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
     return RC::INTERNAL;
   }
   // 创建 join 物理算子
-  unique_ptr<PhysicalOperator> join_physical_oper(new NestedLoopJoinPhysicalOperator);
+  unique_ptr<PhysicalOperator> join_physical_oper;
+  if (join_oper.type() == LogicalOperatorType::JOIN) {
+    // join
+    join_physical_oper = make_unique<NestedLoopJoinPhysicalOperator>();
+  } else if (join_oper.type() == LogicalOperatorType::HashSemiJoin) {
+    // hash 半连接
+    join_physical_oper = make_unique<HashSemiJoinPhysicalOperator>();
+  }
   for (auto &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;
     rc = create(*child_oper, child_physical_oper);

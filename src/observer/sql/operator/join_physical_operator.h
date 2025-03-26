@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/physical_operator.h"
 #include "sql/parser/parse.h"
+#include <unordered_set>
 
 /**
  * @brief 最简单的两表（称为左表、右表）join算子
@@ -50,4 +51,36 @@ private:
   JoinedTuple       joined_tuple_;         //! 当前关联的左右两个tuple
   bool              round_done_   = true;  //! 右表遍历的一轮是否结束
   bool              right_closed_ = true;  //! 右表算子是否已经关闭
+};
+
+
+class HashSemiJoinPhysicalOperator : public PhysicalOperator {
+public:
+    HashSemiJoinPhysicalOperator();
+    virtual ~HashSemiJoinPhysicalOperator() = default;
+
+    PhysicalOperatorType type() const override {
+      return PhysicalOperatorType::HASH_SEMI_JOIN;
+    }
+
+    RC open(Trx *trx) override;
+    RC next() override;
+    RC close() override;
+    Tuple *current_tuple() override;
+
+private:
+    RC build_hash_table();  // 构建右表哈希表（存储值和对应Tuple）
+    RC left_next();        // 左表遍历下一条数据
+
+private:
+    Trx *trx_ = nullptr;
+    PhysicalOperator *left_ = nullptr;
+    PhysicalOperator *right_ = nullptr;
+    Tuple *left_tuple_ = nullptr;
+    Tuple *matched_right_tuple_ = nullptr; // 记录当前匹配的右表Tuple
+    JoinedTuple joined_tuple_;
+
+    // 哈希表结构：存储右表Value和对应的Tuple指针
+    std::unordered_map<string, Tuple*> hash_table_;
+    bool right_built_ = false;
 };

@@ -401,6 +401,8 @@ public:
 
   void set_left(Tuple *left) { left_ = left; }
   void set_right(Tuple *right) { right_ = right; }
+  Tuple * get_left() const { return left_; }
+  Tuple * get_right() const { return right_; }
 
   int cell_num() const override { return left_->cell_num() + right_->cell_num(); }
 
