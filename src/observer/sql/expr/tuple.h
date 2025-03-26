@@ -436,7 +436,7 @@ public:
 
   RC find_cell(const TupleCellSpec &spec, Value &value) const override
   {
-    RC rc = left_->find_cell(spec, value);
+    RC rc = left_->find_cell(spec, value); // left RowTuple
     if (rc == RC::SUCCESS || rc != RC::NOTFOUND) {
       return rc;
     }

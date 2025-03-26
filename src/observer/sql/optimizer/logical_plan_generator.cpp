@@ -124,8 +124,19 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   for (FilterUnit *filter_unit : filter_units) {
     // 子查询
 //    FilterObj &filter_obj_left  = filter_unit->left();
+    FilterObj &filter_obj_left = filter_unit->left();
+    Expression *left = nullptr;
     FilterObj &filter_obj_right = filter_unit->right();
     Expression *right = nullptr;
+
+    if (filter_obj_left.is_attr == 0) {
+      left = new ValueExpr(filter_obj_left.value);
+    } else if (filter_obj_left.is_attr == 1) {
+      left = new FieldExpr(filter_obj_left.field);
+    } else if (filter_obj_left.is_attr == 2) {
+      left = filter_obj_left.expression.get();
+    }
+
     if (filter_obj_right.is_attr == 0) {
       right = new ValueExpr(filter_obj_right.value);
     } else if (filter_obj_right.is_attr == 1) {
@@ -134,11 +145,35 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       right = filter_obj_right.expression.get();
     }
 
-    if (right->type() == ExprType::SUBSELECT) {
+    if (left->type() == ExprType::SUBSELECT) {
+      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(left);
+      unique_ptr<LogicalOperator> sub_oper;
+      create_plan(sub_sql->getExpSelect(), sub_oper);
+      JoinLogicalOperator *join_oper = nullptr;
+      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+        // 半连接
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+      } else {
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+      }
+
+      join_oper->add_child(std::move(table_oper));
+      join_oper->add_child(std::move(sub_oper));
+      table_oper = unique_ptr<LogicalOperator>(join_oper);
+    } else if (right->type() == ExprType::SUBSELECT) {
       SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right);
       unique_ptr<LogicalOperator> sub_oper;
       create_plan(sub_sql->getExpSelect(), sub_oper);
-      JoinLogicalOperator *join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+      JoinLogicalOperator *join_oper = nullptr;
+      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+        // 半连接
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+      } else {
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+      }
+
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(sub_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);

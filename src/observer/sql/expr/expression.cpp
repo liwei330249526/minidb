@@ -21,7 +21,7 @@ using namespace std;
 
 RC FieldExpr::get_value(const Tuple &tuple, Value &value) const
 {
-  return tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
+  return tuple.find_cell(TupleCellSpec(table_name(), field_name()), value); // 表名，列名
 }
 
 bool FieldExpr::equal(const Expression &other) const
@@ -835,7 +835,21 @@ float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<flo
 }
 
 RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
-  return tuple.find_cell(TupleCellSpec(getTableName().c_str(), getFiledName().c_str()), value);
+  RC rc = RC::SUCCESS;
+  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple); // 假定，子查询都有join算子
+  Tuple *tup = jtuple->get_right();
+  int cell_num = tup->cell_num();
+  for (int i = 0; i < cell_num; i++) {
+    rc = tup->cell_at(i, value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get tuple cell value. rc=%s", strrc(rc));
+      return rc;
+    }
+    // 读取的每个值，str
+    string cell_str = value.to_string();
+    break;
+  }
+  return rc;
 }
 
 AttrType SubqueryExpr::value_type() const {  // value type， query 的type

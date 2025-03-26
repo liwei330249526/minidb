@@ -130,7 +130,7 @@ RC NestedLoopJoinPhysicalOperator::right_next()
     return rc;
   }
 
-  right_tuple_ = right_->current_tuple(); // 获取值
+  right_tuple_ = right_->current_tuple(); // 获取值 , ExpressionTuple --> AggregateExpr
   joined_tuple_.set_right(right_tuple_); // 设置到 join 的tuple 中
   return rc;
 }
