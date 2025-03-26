@@ -536,8 +536,24 @@ public:
 
     ParsedSqlNode *get_sub_parser_node() const { return subSel_; }
 
-    SelectStmt *exp_select_;
+    // 物理计划
+
+    // 逻辑计划
+    void setExpSelect(SelectStmt *expSelect);
+    SelectStmt *getExpSelect() const;
+    const string &getTableName() const;
+
+    void setTableName(const string &tableName);
+
+    const string &getFiledName() const;
+
+    void setFiledName(const string &filedName);
 private:
+    // stmt
     ParsedSqlNode * subSel_;
     // 子查询的 SELECT 语句
+    SelectStmt *exp_select_;
+    AttrType attrType_;
+    string table_name_;
+    string filed_name_;
 };

@@ -94,6 +94,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   filter_unit = new FilterUnit;
   // 左边是属性，即列名
 	BinderContext binder_context;
+	binder_context.setDb(db);
 	for (auto &tb : *tables) {
 		binder_context.add_table(tb.second);
 	}

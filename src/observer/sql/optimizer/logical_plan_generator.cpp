@@ -97,11 +97,11 @@ RC LogicalPlanGenerator::create_plan(CalcStmt *calc_stmt, std::unique_ptr<Logica
 
 RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
-  unique_ptr<LogicalOperator> *last_oper = nullptr;
+  unique_ptr<LogicalOperator> *last_oper = nullptr; // 智能指针的地址
 
   unique_ptr<LogicalOperator> table_oper(nullptr);
   last_oper = &table_oper;
-  // 获取所有表， join 的话，有多个表; 每个表有一个 TableGet算子
+  // 获取所有表， join 的话，有多个表; 每个表有一个 TableGet算子; no
   const std::vector<Table *> &tables = select_stmt->tables();
   for (Table *table : tables) {
 
@@ -115,6 +115,32 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       JoinLogicalOperator *join_oper = new JoinLogicalOperator;
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
+      table_oper = unique_ptr<LogicalOperator>(join_oper);
+    }
+  }
+
+  // 根据子查询，构造 join
+  const std::vector<FilterUnit *>    &filter_units = select_stmt->filter_stmt()->filter_units();
+  for (FilterUnit *filter_unit : filter_units) {
+    // 子查询
+//    FilterObj &filter_obj_left  = filter_unit->left();
+    FilterObj &filter_obj_right = filter_unit->right();
+    Expression *right = nullptr;
+    if (filter_obj_right.is_attr == 0) {
+      right = new ValueExpr(filter_obj_right.value);
+    } else if (filter_obj_right.is_attr == 1) {
+      right = new FieldExpr(filter_obj_right.field);
+    } else if (filter_obj_right.is_attr == 2) {
+      right = filter_obj_right.expression.get();
+    }
+
+    if (right->type() == ExprType::SUBSELECT) {
+      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right);
+      unique_ptr<LogicalOperator> sub_oper;
+      create_plan(sub_sql->getExpSelect(), sub_oper);
+      JoinLogicalOperator *join_oper = new JoinLogicalOperator;
+      join_oper->add_child(std::move(table_oper));
+      join_oper->add_child(std::move(sub_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
   }
@@ -169,7 +195,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
      FilterObj &filter_obj_right = filter_unit->right();
 
     // 左边是列，或值， 或算数表达式,
-	  unique_ptr<Expression> left;
+    unique_ptr<Expression> left;
 	  if (filter_obj_left.is_attr == 0) {
       left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
 	  } else if (filter_obj_left.is_attr == 1) {

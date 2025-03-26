@@ -205,6 +205,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
 		  case GREAT_THAN: {
 			  result = (cmp_result > 0);
 		  } break;
+		  case IN_OP: {
+        result = (0 == cmp_result);
+		  } break;
 		  default: {
 			  LOG_WARN("unsupported comparison. %d", comp_);
 			  rc = RC::INTERNAL;
@@ -808,9 +811,38 @@ float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<flo
 }
 
 RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
-  return RC::RECORD_EOF;
+  return tuple.find_cell(TupleCellSpec(getTableName().c_str(), getFiledName().c_str()), value);
 }
 
-AttrType SubqueryExpr::value_type() const {
-  return AttrType::VECTORS;
+AttrType SubqueryExpr::value_type() const {  // value type， query 的type
+  return attrType_;
+//
+//  return AttrType::VECTORS;
+}
+
+void SubqueryExpr::setExpSelect(SelectStmt *expSelect) {
+  exp_select_ = expSelect;
+  attrType_ = expSelect->query_expressions()[0]->value_type();
+  table_name_ = expSelect->tables().front()->name();
+  filed_name_ = expSelect->query_expressions().front()->name();
+}
+
+SelectStmt *SubqueryExpr::getExpSelect() const {
+  return exp_select_;
+}
+
+const string &SubqueryExpr::getTableName() const {
+  return table_name_;
+}
+
+void SubqueryExpr::setTableName(const string &tableName) {
+  table_name_ = tableName;
+}
+
+const string &SubqueryExpr::getFiledName() const {
+  return filed_name_;
+}
+
+void SubqueryExpr::setFiledName(const string &filedName) {
+  filed_name_ = filedName;
 }

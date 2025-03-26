@@ -148,10 +148,10 @@ RC ExpressionBinder::bind_unbound_field_expression(
   }
 
   auto unbound_field_expr = static_cast<UnboundFieldExpr *>(expr.get());
-
+  // 未绑定的 field_expr 表达式
   const char *table_name = unbound_field_expr->table_name();
   const char *field_name = unbound_field_expr->field_name();
-
+  // 校验 table name
   Table *table = nullptr;
   if (is_blank(table_name)) {
     if (context_.query_tables().size() != 1) {
@@ -160,14 +160,14 @@ RC ExpressionBinder::bind_unbound_field_expression(
     }
 
     table = context_.query_tables()[0];
-  } else {
+  } else {  // 判断表是否存在
     table = context_.find_table(table_name);
     if (nullptr == table) {
       LOG_INFO("no such table in from list: %s", table_name);
       return RC::SCHEMA_TABLE_NOT_EXIST;
     }
   }
-
+  // 校验 field name
   if (0 == strcmp(field_name, "*")) {
     wildcard_fields(table, bound_expressions);
   } else {
@@ -176,7 +176,7 @@ RC ExpressionBinder::bind_unbound_field_expression(
       LOG_INFO("no such field in table: %s.%s", table_name, field_name);
       return RC::SCHEMA_FIELD_MISSING;
     }
-
+    // 字段表达式，这个包括 列-表 的元数据; 表的列元数据集合，索引，目录等； 列的类型，偏移，长度等
     Field      field(table, field_meta);
     FieldExpr *field_expr = new FieldExpr(field);
     field_expr->set_name(field_name);
@@ -533,14 +533,14 @@ RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
   }
   // 如果是子查询, 则递归create stmt
   if (expr->type() == ExprType::SUBSELECT) {
-    SubqueryExpr &sub_sql = reinterpret_cast<SubqueryExpr &>(*expr);
+    SubqueryExpr *sub_sql =  static_cast<SubqueryExpr *>(expr.get());
     Stmt          *stmt     = nullptr;
-    rc = Stmt::create_stmt(context_.getDb(), *(sub_sql.get_sub_parser_node()), stmt); // 递归调用，对子查询生成抽象语法树
+    rc = Stmt::create_stmt(context_.getDb(), *(sub_sql->get_sub_parser_node()), stmt); // 递归调用，对子查询生成抽象语法树
     if (rc != RC::SUCCESS && rc != RC::UNIMPLEMENTED) {
       LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
       return rc;
     }
-    sub_sql.exp_select_ = dynamic_cast<SelectStmt *>(stmt);  // 子查询
+    sub_sql->setExpSelect(static_cast<SelectStmt *>(stmt));  // 子查询
     bound_expressions.emplace_back(std::move(expr));
   }
 

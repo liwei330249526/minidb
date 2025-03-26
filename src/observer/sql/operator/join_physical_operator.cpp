@@ -38,7 +38,7 @@ RC NestedLoopJoinPhysicalOperator::next()
 {
   bool left_need_step = (left_tuple_ == nullptr);
   RC   rc             = RC::SUCCESS;
-  if (round_done_) {
+  if (round_done_) {    // 右表一轮结束
     left_need_step = true;
   } else {               // 右表一轮没有结束， 右表继续递进
     rc = right_next();

@@ -125,3 +125,18 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   stmt                      = select_stmt;
   return RC::SUCCESS;
 }
+
+std::vector<Table *> SelectStmt::all_tables() const {
+  std::vector<Table *> res;
+  res.insert(res.end(), tables().begin(), tables().end());
+  for(auto &fu : filter_stmt()->filter_units()) {
+    if (fu->right().expression->type() == ExprType::SUBSELECT) {
+      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(fu->right().expression.get());
+      if (sub_sql->getExpSelect() != nullptr) {
+        auto const &tbs = sub_sql->getExpSelect()->all_tables();
+        res.insert(res.end(), tbs.begin(), tbs.end());
+      }
+    }
+  }
+  return res;
+}

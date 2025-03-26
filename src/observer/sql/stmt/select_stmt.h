@@ -43,6 +43,7 @@ public:
 
 public:
   const std::vector<Table *> &tables() const { return tables_; }
+  std::vector<Table *> all_tables() const;
   FilterStmt                 *filter_stmt() const { return filter_stmt_; }
 
   std::vector<std::unique_ptr<Expression>> &query_expressions() { return query_expressions_; }
