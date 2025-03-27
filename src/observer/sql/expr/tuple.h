@@ -170,9 +170,9 @@ public:
     }
     speces_.clear();
   }
-
+  // 设置记录
   void set_record(Record *record) { this->record_ = record; }
-
+  // 设置 schema
   void set_schema(const Table *table, const std::vector<FieldMeta> *fields)
   {
     table_ = table;
@@ -187,19 +187,22 @@ public:
       speces_.push_back(new FieldExpr(table, &field));   // FieldExpr(table, &field) 传入两个指针，数据在外部
     }
   }
-
+  // 元组个数
   int cell_num() const override { return speces_.size(); }
-
+  // 获取 index 这个元组
   RC cell_at(int index, Value &cell) const override
   {
     if (index < 0 || index >= static_cast<int>(speces_.size())) {
       LOG_WARN("invalid argument. index=%d", index);
       return RC::INVALID_ARGUMENT;
     }
-
+    // 获取这个元组的 字段表达式
     FieldExpr       *field_expr = speces_[index];
+    // 获取这个元组的 元数据， 列类型，类偏移，列长度等信息
     const FieldMeta *field_meta = field_expr->field().meta();
+    // 设置元组类型
     cell.set_type(field_meta->type());
+    // 复制元组数据
     cell.set_data(this->record_->data() + field_meta->offset(), field_meta->len()); // 最终从 record_ 中取数据 ，例如第1列数据，id, offset = 0, len = 4
     return RC::SUCCESS;
   }

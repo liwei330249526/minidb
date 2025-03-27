@@ -133,6 +133,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 	  filter_obj.init_expression(std::move(bound_expressions.front()));
 
 	  filter_unit->set_left(filter_obj);
+  } else if (condition.right_is_attr == 3){
+    // 值列表
+    // 左边是值
+    FilterObj filter_obj;
+    filter_obj.init_values(condition.left_values);
+    filter_unit->set_left(filter_obj);
   }
 	// 右边是属性，即列名
   if (condition.right_is_attr == 1) {
@@ -169,6 +175,12 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 	  }
 	  filter_obj.init_expression(std::move(bound_expressions.front()));
 	  filter_unit->set_right(filter_obj);
+  } else if (condition.right_is_attr == 3){
+    // 值列表
+    // 左边是值
+    FilterObj filter_obj;
+    filter_obj.init_values(condition.right_values);
+    filter_unit->set_right(filter_obj);
   }
 	// 设置操作符
   filter_unit->set_comp(comp);

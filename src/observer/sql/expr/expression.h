@@ -44,6 +44,7 @@ enum class ExprType
 
   FIELD,        ///< 字段。在实际执行时，根据行数据内容提取对应字段的值
   VALUE,        ///< 常量值
+  VALUE_LIST,        ///< 常量值
   CAST,         ///< 需要做类型转换的表达式
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
@@ -514,7 +515,15 @@ private:
     std::unique_ptr<Expression> left_;
     std::unique_ptr<Expression> right_;
 };
-// 表达式， 解析node
+
+// 值列表表达式
+class ValueListExpr : public Expression {
+    ValueListExpr() = default;
+public:
+    ExprType type() const override { return ExprType::VALUE_LIST; }
+    std::vector<Value> values;         ///< 要插入的值
+};
+
 class SubqueryExpr : public Expression {
 public:
     SubqueryExpr(ParsedSqlNode *select_stmt)

@@ -28,6 +28,7 @@ class ExplainLogicalOperator;
 class JoinLogicalOperator;
 class CalcLogicalOperator;
 class GroupByLogicalOperator;
+class ArrGetLogicalOperator;
 
 /**
  * @brief 物理计划生成器
@@ -46,6 +47,7 @@ public:
 
 private:
   RC create_plan(TableGetLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
+  RC create_plan(ArrGetLogicalOperator &table_get_oper, unique_ptr<PhysicalOperator> &oper);
   RC create_plan(PredicateLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(ProjectLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(InsertLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);

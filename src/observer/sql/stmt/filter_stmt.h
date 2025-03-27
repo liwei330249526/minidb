@@ -34,6 +34,7 @@ struct FilterObj
   Field field;
   //  值
   Value value;
+  std::vector<Value> values;
   // 表达式
   unique_ptr<Expression> expression;  // 很可能是 ArithmeticExpr
 
@@ -49,6 +50,12 @@ struct FilterObj
     this->value = value;
   }
 
+  void init_values(const std::vector<Value> &values)
+  {
+    is_attr     = 3;  // 值列表
+    this->values= values;
+  }
+
   void init_expression(unique_ptr<Expression> left_expression)
   {
     is_attr     = 2;
@@ -56,13 +63,14 @@ struct FilterObj
   }
 
   FilterObj() = default;
-		// 移动赋值运算符
+		// 移动赋值运算符, liwei： 移动赋值运算符用于把一个右值对象的资源所有权转移到一个已存在的对象上
 	FilterObj& operator=(FilterObj&& other) noexcept {
 		if (this != &other) {
 			is_attr = other.is_attr;
 			field = std::move(other.field);
 			value = std::move(other.value);
 			expression = std::move(other.expression);
+      values = std::move(other.values);
 		}
 		return *this;
 	}
@@ -88,7 +96,9 @@ public:
   void set_comp(CompOp comp) { comp_ = comp; }
 
   CompOp comp() const { return comp_; }
-
+  // liwei 它可以将左值强制转换为右值引用，从而调用移动构造函数或移动赋值运算符，实现资源的高效转移。当你调用 filter_unit->set_right(filter_obj); 时，filter_obj 的资源（如动态分配的内存、文件句柄等）会被转移到 filter_unit 的 right_ 成员变量中。
+  // 在 filter_obj 的资源转移到 right_ 之后，filter_obj 就处于有效但未指定的状态。当 filter_obj 被析构时，它已经不再拥有之前的资源，因此析构操作不会影响 right_ 的值。right_ 现在拥有这些资源，并且会在 filter_unit 对象被析构时进行相应的资源释放操作。
+  // 移动赋值运算符
   void set_left(FilterObj &obj) { left_ = std::move(obj); }
   void set_right(FilterObj &obj) { right_ = std::move(obj); }
 

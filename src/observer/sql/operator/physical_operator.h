@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 //
 // Created by WangYunlai on 2022/6/7.
+// physical_operator.h
 //
 
 #pragma once
@@ -56,6 +57,7 @@ enum class PhysicalOperatorType
   HASH_GROUP_BY,
   GROUP_BY_VEC,
   AGGREGATE_VEC,
+  ARRAY_OPERATOR,
   EXPR_VEC,
 };
 

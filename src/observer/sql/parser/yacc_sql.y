@@ -155,6 +155,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
   std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
+  ValueListExpr *                            valuelist_expr;  // 新增
 }
 
 %token <number> NUMBER    // 整数
@@ -170,10 +171,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <number>              number
 %type <string>              relation
 %type <comp>                comp_op
+%type <comp>                sub_query_comp_op
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
-// %type <value_list>          value_list
+%type <value_list>          value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <string>              storage_format
@@ -188,6 +190,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
 %type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
 %type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
+// %type <valuelist_expr>      valuelist_expr_y // valueslists
+
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -430,21 +434,26 @@ insert_stmt:        /*insert   语句的语法解析树*/
     }
     ;
 
-// value_list:
-//     /* empty */
-//     {
-//       $$ = nullptr;
-//     }
-//     | COMMA value value_list  {
-//       if ($3 != nullptr) {
-//         $$ = $3;
-//       } else {
-//         $$ = new std::vector<Value>;
-//       }
-//       $$->emplace_back(*$2);
-//       delete $2;
-//     }
-//     ;
+  value_list:
+      /* empty */
+      {
+        $$ = nullptr;
+      }
+      | value {
+        $$ = new std::vector<Value>;
+        $$->emplace_back(*$1);
+        delete $1;
+      }
+      | value COMMA value_list  {
+        if ($3 != nullptr) {
+          $$ = $3;
+        } else {
+          $$ = new std::vector<Value>;
+        }
+        $$->emplace_back(*$1);
+        delete $1;
+      }
+      ;
 value:
     NUMBER {
       $$ = new Value((int)$1);
@@ -597,6 +606,14 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
    }
     ;
+// valuelist_expr_y:
+//     LBRACE value_list RBRACE
+//     {
+//         $$ = new ValueListExpr();
+//         $$->values.swap(*$2);
+//     }
+//     ;
+
 subquery:
     LBRACE select_stmt RBRACE
     {
@@ -722,9 +739,12 @@ expression:
     | vector_function {  // 新增：支持向量函数
       $$ = $1;
     }
-    | subquery {
-      $$ = $1;
-    }
+//    | subquery { // 子查询， 是一个expression
+//      $$ = $1;
+//    }
+//    | valuelist_expr_y { // values list 是一个 expression
+//      $$ = $1;
+//    }
     // your code here
     ;
 vector_function:
@@ -816,7 +836,15 @@ condition_list:
     }
     ;
 condition:
-    expression comp_op expression
+    expression sub_query_comp_op LBRACE value_list RBRACE {  // value list , 小的构造大的.
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 3;   // 右边是值列表
+      $$->right_values.swap(*$4);
+      $$->comp = $2;
+    }
+     | expression sub_query_comp_op subquery    // 将 subquery 从 expression 拿出来
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 2;    // 左边是表达式
@@ -825,106 +853,26 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
-    | comp_op expression {
-//       $$ = new ConditionSqlNode;
-//       $$->left_is_attr = 2;    // 左边是表达式
-//       $$->left_expression = $1;
+     | subquery sub_query_comp_op expression
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
       $$->right_is_attr = 2;   // 右边是表达式
-      $$->right_expression = $2;
-      $$->comp = $1;
+      $$->right_expression = $3;
+      $$->comp = $2;
+    }
+
+     | expression comp_op expression
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 2;   // 右边是表达式
+      $$->right_expression = $3;
+      $$->comp = $2;
     }
     ;
-//    |
-//    expression LIKE expression
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 2;    // 左边是表达式
-//      $$->left_expression = $1;
-//      $$->right_is_attr = 2;   // 右边是表达式
-//      $$->right_expression = $3;
-//      $$->comp = LIKE_OP;
-//    }
-//    |
-//    expression NOT LIKE expression
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 2;    // 左边是表达式
-//      $$->left_expression = $1;
-//      $$->right_is_attr = 2;   // 右边是表达式
-//      $$->right_expression = $4;
-//      $$->comp = NOT_LIKE_OP;
-//    }
-//    rel_attr comp_op value
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | value comp_op value
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 0;
-//      $$->left_value = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr comp_op rel_attr
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 1;
-//      $$->right_attr = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | value comp_op rel_attr
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 0;
-//      $$->left_value = *$1;
-//      $$->right_is_attr = 1;
-//      $$->right_attr = *$3;
-//      $$->comp = $2;
-//
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr LIKE value  // 添加 LIKE 条件规则
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$3;
-//      $$->comp = LIKE_OP;  // 假设 LIKE_OP 是一个表示 LIKE 操作的枚举值
-//      delete $1;
-//      delete $3;
-//    }
-//    | rel_attr NOT LIKE value  // 添加 LIKE 条件规则
-//    {
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 1;
-//      $$->left_attr = *$1;
-//      $$->right_is_attr = 0;
-//      $$->right_value = *$4;
-//      $$->comp = NOT_LIKE_OP;  // 假设 NOT_LIKE_OP 是一个表示 LIKE 操作的枚举值
-//      delete $1;
-//      delete $4;
-//    }
-//    ;
 
 comp_op:
       EQ { $$ = EQUAL_TO; }
@@ -935,7 +883,11 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
     | NOT LIKE { $$ = NOT_LIKE_OP; }
-    | IN { $$ = IN_OP; }
+//    | IN { $$ = IN_OP; }
+//    | NOT IN { $$ = NOT_IN_OP; }
+    ;
+sub_query_comp_op:                 // perfact, 这里规避了， warning: 1 reduce/reduce conflict [-Wconflicts-rr]  错误
+      IN { $$ = IN_OP; }
     | NOT IN { $$ = NOT_IN_OP; }
     ;
 

@@ -82,6 +82,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         UPDATE
         LBRACE
         RBRACE
+        LSQBRACE
+        RSQBRACE
         COMMA
         TRX_BEGIN
         TRX_COMMIT
@@ -103,7 +105,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         ON
         INNER   // 声明了词法单元
         JOIN   // join
+        SUM    // sum
         COUNT  // count
+        AVG    // avg
+        MAX    // max
+        MIN    // min
         LOAD
         DATA
         INFILE
@@ -120,6 +126,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         NOT   // 添加 NOT 词法单元
         PERCENT  // 添加 % 词法单元
         UNDERSCORE  // 添加 _ 词法单元
+        L2_DISTANCE  // 向量函数距离表达式 欧几里得距离
+        COSINE_DISTANCE // 向量函数距离表达式 余弦距离
+        INNER_PRODUCT // 向量函数距离表达式  内积
+        IN
+        EXISTS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
@@ -141,10 +152,14 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   char *                                     string;
   int                                        number;
   float                                      floats;
+  VectorFunctionExpr *                       vector_function_expr;  // 向量函数表达式
+  std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
+  SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
+  ValueListExpr *                            valuelist_expr;  // 新增
 }
 
-%token <number> NUMBER
-%token <floats> FLOAT
+%token <number> NUMBER    // 整数
+%token <floats> FLOAT     // 浮点 %token <floats> FLOAT 就是对 FLOAT 词法单元的声明，其中 <floats> 表示该词法单元的语义值类型为 floats（对应你在 %union 中定义的 floats 成员）。
 %token <string> ID
 %token <string> SSS
 //非终结符
@@ -171,6 +186,10 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <sql_node>            select_stmt
 %type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
 %type <join_node_list>      join_list      // join 链表
+%type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
+%type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
+%type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
+// %type <valuelist_expr>      valuelist_expr_y // valueslists
 
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
@@ -350,12 +369,12 @@ attr_def_list:
     ;
 
 attr_def:
-    ID type LBRACE number RBRACE
+    ID type LBRACE number RBRACE  // 这里支持了向量, 例如 C1 VECTOR(3)
     {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
-      $$->length = $4;
+      $$->length = $4 * 4;  // float 字节是4， 有number个 float
       free($1);
     }
     | ID type
@@ -378,36 +397,62 @@ type:
     | VECTOR_T { $$ = static_cast<int>(AttrType::VECTORS); }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
-    INSERT INTO ID VALUES LBRACE value value_list RBRACE
+//    INSERT INTO ID VALUES LBRACE value value_list RBRACE
+//    {
+//      $$ = new ParsedSqlNode(SCF_INSERT);
+//      $$->insertion.relation_name = $3;  // 表名
+//      if ($7 != nullptr) {  // 列表不为空
+//        $$->insertion.values.swap(*$7);
+//        delete $7;
+//      }
+//      $$->insertion.values.emplace_back(*$6); // 加上一个值
+//      std::reverse($$->insertion.values.begin(), $$->insertion.values.end()); // 翻转
+//      delete $6;
+//      free($3);
+//    }
+//    ;
+    INSERT INTO ID VALUES LBRACE expression_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_INSERT);
       $$->insertion.relation_name = $3;
-      if ($7 != nullptr) {
-        $$->insertion.values.swap(*$7);
-        delete $7;
+
+//      if ($7 != nullptr) {
+//        $$->insertion.values.swap(*$7);
+//        delete $7;
+//      }
+//      $$->insertion.values.emplace_back(*$6);
+//      std::reverse($$->insertion.values.begin(), $$->insertion.values.end());
+//      delete $6;
+
+      if ($6 != nullptr) {
+        $$->insertion.expressions.swap(*$6);  // expression 表达式
+        delete $6;
       }
-      $$->insertion.values.emplace_back(*$6);
-      std::reverse($$->insertion.values.begin(), $$->insertion.values.end());
-      delete $6;
+
       free($3);
     }
     ;
 
-value_list:
-    /* empty */
-    {
-      $$ = nullptr;
-    }
-    | COMMA value value_list  {
-      if ($3 != nullptr) {
-        $$ = $3;
-      } else {
-        $$ = new std::vector<Value>;
+  value_list:
+      /* empty */
+      {
+        $$ = nullptr;
       }
-      $$->emplace_back(*$2);
-      delete $2;
-    }
-    ;
+      | value {
+        $$ = new std::vector<Value>;
+        $$->emplace_back(*$1);
+        delete $1;
+      }
+      | value COMMA value_list  {
+        if ($3 != nullptr) {
+          $$ = $3;
+        } else {
+          $$ = new std::vector<Value>;
+        }
+        $$->emplace_back(*$1);
+        delete $1;
+      }
+      ;
 value:
     NUMBER {
       $$ = new Value((int)$1);
@@ -417,11 +462,47 @@ value:
       $$ = new Value((float)$1);
       @$ = @1;
     }
+    | LSQBRACE vector_literal RSQBRACE   // 向量值
+    {
+      $$ = new Value(*$2);  // 通过一个std::vector  [1.5,2.3,3.3]，Value构造函数接受一个std::vector 构造一个向量类型的 Value
+      delete($2);
+    }
     |SSS {
       char *tmp = common::substr($1,1,strlen($1)-2);
       $$ = new Value(tmp);
       free(tmp);
       free($1);
+    }
+    ;
+
+vector_literal:
+    NUMBER {   // 向量 vector 支持整数，
+      $$ = new std::vector<float>;
+      $$->push_back(static_cast<float>$1);
+    }
+    |
+    FLOAT      // 支持浮点数
+    {
+      $$ = new std::vector<float>;
+      $$->push_back($1);
+    }
+    | FLOAT COMMA vector_literal  // 递归，多浮点数
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<float>;
+      }
+      $$->insert($$->begin(), $1);
+    }
+    | NUMBER COMMA vector_literal // 递归，多整数
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<float>;
+      }
+      $$->insert($$->begin(), static_cast<float>$1);
     }
     ;
 storage_format:
@@ -524,7 +605,21 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
    }
     ;
+// valuelist_expr_y:
+//     LBRACE value_list RBRACE
+//     {
+//         $$ = new ValueListExpr();
+//         $$->values.swap(*$2);
+//     }
+//     ;
 
+subquery:
+    LBRACE select_stmt RBRACE
+    {
+      $$ = new SubqueryExpr($2);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    ;
 join_list:
     /* empty */  // 空规则， null
     {
@@ -568,7 +663,7 @@ calc_stmt:
 expression_list:
     expression
     {
-      $$ = new std::vector<std::unique_ptr<Expression>>;
+      $$ = new std::vector<std::unique_ptr<Expression>>; // 给Vector
       $$->emplace_back($1);
     }
     | expression COMMA expression_list
@@ -606,6 +701,11 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
+//    | vector_literal {  // 根据向量 vector 的 Value  构造一个 ValueExpr
+//        $$ = new ValueExpr(*$1);
+//        $$->set_name(token_name(sql_string, &@$));
+//        delete $1;
+//    }
     | rel_attr {
       RelAttrSqlNode *node = $1;
       $$ = new UnboundFieldExpr(node->relation_name, node->attribute_name);
@@ -615,11 +715,61 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
-    | COUNT expression {
-      $$ = create_aggregate_expression("count", $2, sql_string, &@$);
+    | SUM LBRACE expression RBRACE {
+      // 支持 sum (col) 语法
+      $$ = create_aggregate_expression("sum", $3, sql_string, &@$);
+    }
+    | COUNT LBRACE expression RBRACE {
+      // 支持 count (col)  语法
+      $$ = create_aggregate_expression("count", $3, sql_string, &@$);
+    }
+    | AVG LBRACE expression RBRACE {
+      // 支持 avg (col) 语法
+      $$ = create_aggregate_expression("avg", $3, sql_string, &@$);
+    }
+    | MAX LBRACE expression RBRACE {
+      // 支持 max (col) 语法
+      $$ = create_aggregate_expression("max", $3, sql_string, &@$);
+    }
+    | MIN LBRACE expression RBRACE {
+      // 支持 min (col) 语法
+      $$ = create_aggregate_expression("min", $3, sql_string, &@$);
+    }
+    | vector_function {  // 新增：支持向量函数
+      $$ = $1;
+    }
+    | subquery { // 子查询， 是一个expression
+      $$ = $1;
+    }
+    | valuelist_expr_y { // values list 是一个 expression
+      $$ = $1;
     }
     // your code here
     ;
+vector_function:
+    L2_DISTANCE LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::L2_DISTANCE, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    | COSINE_DISTANCE LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::COSINE_DISTANCE, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    | INNER_PRODUCT LBRACE expression COMMA expression RBRACE
+    {
+      $$ = new VectorFunctionExpr(VectorFunctionExpr::VectorFunctionType::INNER_PRODUCT, $3, $5);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    ;
+//aggregate_expression:
+//    COUNT LBRACE expression RBRACE
+//    {
+//      $$ = new AggregateExpr(AGG_COUNT, $3);
+//      $$->set_name(token_name(sql_string, &@$));
+//    }
+//    ;
 
 rel_attr:
     ID {
@@ -660,7 +810,7 @@ rel_list:       // 用于表示 表名列表; rel_list 是一个非终结符，�
     ;
 
 where:
-    /* empty */
+    /* empty */   // where 可有可无
     {
       $$ = nullptr;
     }
@@ -685,7 +835,15 @@ condition_list:
     }
     ;
 condition:
-    expression comp_op expression
+    expression comp_op LBRACE value_list RBRACE {  // value list , 小的构造大的.
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 3;   // 右边是值列表
+      $$->right_values.swap(*$4);
+      $$->comp = $2;
+    }
+    | expression comp_op expression
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 2;    // 左边是表达式
@@ -694,7 +852,9 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
-    ;
+    // todo subslect 应该也在这里
+
+
 //    |
 //    expression LIKE expression
 //    {
@@ -796,6 +956,8 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
     | NOT LIKE { $$ = NOT_LIKE_OP; }
+    | IN { $$ = IN_OP; }
+    | NOT IN { $$ = NOT_IN_OP; }
     ;
 
 // your code here

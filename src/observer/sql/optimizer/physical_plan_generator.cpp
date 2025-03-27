@@ -13,6 +13,8 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include <utility>
+#include <src/observer/sql/operator/array_logical_operator.h>
+#include <src/observer/sql/operator/array_physical_operator.h>
 
 #include "common/log/log.h"
 #include "sql/expr/expression.h"
@@ -96,6 +98,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
       return create_plan(static_cast<GroupByLogicalOperator &>(logical_operator), oper);
     } break;
 
+    case LogicalOperatorType::ARR_GET: {
+      return create_plan(static_cast<ArrGetLogicalOperator &>(logical_operator), oper);
+    } break;
+
     default: {
       ASSERT(false, "unknown logical operator type");
       return RC::INVALID_ARGUMENT;
@@ -127,8 +133,6 @@ RC PhysicalPlanGenerator::create_vec(LogicalOperator &logical_operator, unique_p
   }
   return rc;
 }
-
-
 
 RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, unique_ptr<PhysicalOperator> &oper)
 {
@@ -200,6 +204,82 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
 
   return RC::SUCCESS;
 }
+
+// new
+RC PhysicalPlanGenerator::create_plan(ArrGetLogicalOperator &arr_get_oper, unique_ptr<PhysicalOperator> &oper)
+{
+  vector<unique_ptr<Expression>> &predicates = arr_get_oper.predicates();
+  // 看看是否有可以用于索引查找的表达式
+  const std::vector<Value> &arr = arr_get_oper.getArr();
+
+//  Index     *index      = nullptr;
+//  ValueExpr *value_expr = nullptr;
+//  for (auto &expr : predicates) {
+//    if (expr->type() == ExprType::COMPARISON) {
+//      auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
+//      // 简单处理，就找等值查询
+//      if (comparison_expr->comp() != EQUAL_TO) {
+//        continue;
+//      }
+//
+//      unique_ptr<Expression> &left_expr  = comparison_expr->left();
+//      unique_ptr<Expression> &right_expr = comparison_expr->right();
+//      // 左右比较的一边最少是一个值
+//      if (left_expr->type() != ExprType::VALUE && right_expr->type() != ExprType::VALUE) {
+//        continue;
+//      }
+//
+//      FieldExpr *field_expr = nullptr;
+//      if (left_expr->type() == ExprType::FIELD) {
+//        ASSERT(right_expr->type() == ExprType::VALUE, "right expr should be a value expr while left is field expr");
+//        field_expr = static_cast<FieldExpr *>(left_expr.get());
+//        value_expr = static_cast<ValueExpr *>(right_expr.get());
+//      } else if (right_expr->type() == ExprType::FIELD) {
+//        ASSERT(left_expr->type() == ExprType::VALUE, "left expr should be a value expr while right is a field expr");
+//        field_expr = static_cast<FieldExpr *>(right_expr.get());
+//        value_expr = static_cast<ValueExpr *>(left_expr.get());
+//      }
+//
+//      if (field_expr == nullptr) {
+//        continue;
+//      }
+//
+//      const Field &field = field_expr->field();
+//      index              = table->find_index_by_field(field.field_name());
+//      if (nullptr != index) {
+//        break;
+//      }
+//    }
+//  }
+
+//  if (index != nullptr) {
+//    ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
+//
+//    const Value               &value           = value_expr->get_value();
+//    IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(table,
+//                                                                               index,
+//                                                                               arr_get_oper.read_write_mode(),
+//                                                                               &value,
+//                                                                               true /*left_inclusive*/,
+//                                                                               &value,
+//                                                                               true /*right_inclusive*/);
+//
+//    index_scan_oper->set_predicates(std::move(predicates));
+//    oper = unique_ptr<PhysicalOperator>(index_scan_oper);
+//    LOG_TRACE("use index scan");
+//  } else {
+//    auto table_scan_oper = new TableScanPhysicalOperator(table, table_get_oper.read_write_mode());
+    auto array_operator = new ArrayPhysicalOperator(arr);
+//    auto array_operator = make_unique<ArrayPhysicalOperator>(arr);
+    array_operator->set_predicates(std::move(predicates));
+    oper = unique_ptr<PhysicalOperator>(array_operator);
+    LOG_TRACE("use ArrGetLogicalOperator");
+//  }
+
+  return RC::SUCCESS;
+}
+
+
 
 RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, unique_ptr<PhysicalOperator> &oper)
 {

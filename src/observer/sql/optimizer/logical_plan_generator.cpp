@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <common/log/log.h>
 #include <src/observer/sql/stmt/update_stmt.h>
+#include <src/observer/sql/operator/array_logical_operator.h>
 
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/delete_logical_operator.h"
@@ -38,6 +39,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/stmt.h"
 
 #include "sql/expr/expression_iterator.h"
+#include "sql/operator/array_physical_operator.h"
 
 using namespace std;
 using namespace common;
@@ -135,6 +137,22 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       left = new FieldExpr(filter_obj_left.field);
     } else if (filter_obj_left.is_attr == 2) {
       left = filter_obj_left.expression.get();
+    } else if (filter_obj_left.is_attr == 3) {
+//      left = filter_obj_left.values.get();
+      JoinLogicalOperator *join_oper = nullptr;
+      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+        // 半连接
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+      } else {
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+      }
+      // 这里是物理计划
+//      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_left.values));
+      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_left.values, ReadWriteMode::READ_WRITE));
+      join_oper->add_child(std::move(table_oper));
+      join_oper->add_child(std::move(array_operator));
+      table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
 
     if (filter_obj_right.is_attr == 0) {
@@ -143,6 +161,23 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       right = new FieldExpr(filter_obj_right.field);
     } else if (filter_obj_right.is_attr == 2) {
       right = filter_obj_right.expression.get();
+    } else if (filter_obj_right.is_attr == 3) {
+//      right = filter_obj_right.values.get();
+      right = new ValueExpr(filter_obj_right.values.front());
+      JoinLogicalOperator *join_oper = nullptr;
+      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+        // 半连接
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+      } else {
+        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+      }
+      // 这里是物理计划
+//      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_right.values));
+      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_right.values, ReadWriteMode::READ_WRITE));
+      join_oper->add_child(std::move(table_oper));
+      join_oper->add_child(std::move(array_operator));
+      table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
 
     if (left->type() == ExprType::SUBSELECT) {
@@ -237,7 +272,9 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 		  left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
 	  } else if (filter_obj_left.is_attr == 2) {
 			left = std::move(filter_obj_left.expression) ;
-	  }
+	  } else if (filter_obj_left.is_attr == 3) {
+      left = unique_ptr<Expression>(new ValueExpr(Value(1)));
+    }
 
 	  unique_ptr<Expression> right;
 	  if (filter_obj_right.is_attr == 0) {
@@ -246,7 +283,9 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 		  right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
 	  } else if (filter_obj_right.is_attr == 2) {
 		  right = std::move(filter_obj_right.expression);
-	  }
+	  } else if (filter_obj_right.is_attr == 3) {
+      right = unique_ptr<Expression>(new ValueExpr(Value(1)));
+    }
 
 //    unique_ptr<Expression> left(filter_obj_left.is_attr
 //                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))

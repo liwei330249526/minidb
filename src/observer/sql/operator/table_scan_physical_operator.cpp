@@ -33,10 +33,12 @@ RC TableScanPhysicalOperator::next()
   RC rc = RC::SUCCESS;
 
   bool filter_result = false;
+  // 获取一个记录
   while (OB_SUCC(rc = record_scanner_.next(current_record_))) {
     LOG_TRACE("got a record. rid=%s", current_record_.rid().to_string().c_str());
-    // 获取一行数据
+    // 设置元组 一个记录
     tuple_.set_record(&current_record_);
+    // 过滤元组
     rc = filter(tuple_, filter_result);
     if (rc != RC::SUCCESS) {
       LOG_TRACE("record filtered failed=%s", strrc(rc));
