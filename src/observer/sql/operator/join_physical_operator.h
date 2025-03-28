@@ -67,13 +67,15 @@ public:
     RC next() override;
     RC close() override;
     Tuple *current_tuple() override;
-
+    Expression *getLeftFiled() const;
+    void setLeftFiled(Expression *leftFiled);
 private:
     RC build_hash_table();  // 构建右表哈希表（存储值和对应Tuple）
     RC left_next();        // 左表遍历下一条数据
 
 private:
     Trx *trx_ = nullptr;
+    Expression *left_filed_;
     PhysicalOperator *left_ = nullptr;
     PhysicalOperator *right_ = nullptr;
     Tuple *left_tuple_ = nullptr;

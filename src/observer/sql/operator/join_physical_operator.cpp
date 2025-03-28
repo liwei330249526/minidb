@@ -187,7 +187,8 @@ RC HashSemiJoinPhysicalOperator::next() {
 
     Value left_value;
 //    left_tuple_->get_value(0, left_value); // 获取左表比较值
-    left_tuple_->cell_at(0, left_value);
+    left_filed_->get_value(*left_tuple_, left_value);
+//    left_tuple_->cell_at(0, left_value);
     // 在哈希表中查找匹配
     string keyStr = left_value.to_string();
     auto it = hash_table_.find(keyStr);
@@ -221,4 +222,12 @@ RC HashSemiJoinPhysicalOperator::close() {
 
 Tuple *HashSemiJoinPhysicalOperator::current_tuple() {
   return &joined_tuple_;
+}
+
+Expression *HashSemiJoinPhysicalOperator::getLeftFiled() const {
+  return left_filed_;
+}
+
+void HashSemiJoinPhysicalOperator::setLeftFiled(Expression *leftFiled) {
+  left_filed_ = leftFiled;
 }

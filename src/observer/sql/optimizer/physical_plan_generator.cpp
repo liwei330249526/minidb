@@ -429,7 +429,9 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
     join_physical_oper = make_unique<NestedLoopJoinPhysicalOperator>();
   } else if (join_oper.type() == LogicalOperatorType::HashSemiJoin) {
     // hash 半连接
-    join_physical_oper = make_unique<HashSemiJoinPhysicalOperator>();
+    unique_ptr<HashSemiJoinPhysicalOperator> joinPhy = make_unique<HashSemiJoinPhysicalOperator>();
+    joinPhy->setLeftFiled(join_oper.getLeftFiled());
+    join_physical_oper = std::move(joinPhy);
   }
   for (auto &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;

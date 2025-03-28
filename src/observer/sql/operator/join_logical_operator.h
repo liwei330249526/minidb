@@ -25,12 +25,26 @@ class JoinLogicalOperator : public LogicalOperator
 {
 public:
   JoinLogicalOperator()          = default;
+  JoinLogicalOperator(Expression *left_filed, LogicalOperatorType join_type): left_filed_(left_filed),join_type_(join_type){
+
+  }
   JoinLogicalOperator(LogicalOperatorType join_type): join_type_(join_type){
 
   }
   virtual ~JoinLogicalOperator() = default;
 
   LogicalOperatorType type() const override { return join_type_; }
+
+private:
+    Expression *left_filed_;
+public:
+    Expression *getLeftFiled() const {
+      return left_filed_;
+    }
+
+    void setLeftFiled(Expression *leftFiled) {
+      left_filed_ = leftFiled;
+    }
 
 private:
     LogicalOperatorType join_type_;

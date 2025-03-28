@@ -168,7 +168,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
           filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
         // 半连接
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
       } else {
         join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
       }
@@ -204,7 +204,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
           filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
         // 半连接
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
       } else {
         join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
       }
