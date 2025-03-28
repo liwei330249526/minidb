@@ -139,7 +139,7 @@ protected:
 private:
   std::string name_;
 };
-
+// select * from t;  * 表达式
 class StarExpr : public Expression
 {
 public:
@@ -157,7 +157,7 @@ public:
 private:
   std::string table_name_;
 };
-
+// 未绑定的 filed, 表名， 字段名
 class UnboundFieldExpr : public Expression
 {
 public:
@@ -194,20 +194,23 @@ public:
   virtual ~FieldExpr() = default;
 
   bool equal(const Expression &other) const override;
-
+  // 这是一个字段
   ExprType type() const override { return ExprType::FIELD; }
+  // 字段数据类型，是整数，还是字符串
   AttrType value_type() const override { return field_.attr_type(); }
+  // 这个字段的长度
   int      value_length() const override { return field_.meta()->len(); }
-
+  // 字段
   Field &field() { return field_; }
 
   const Field &field() const { return field_; }
-
+  // 表名，字段名
   const char *table_name() const { return field_.table_name(); }
   const char *field_name() const { return field_.field_name(); }
 
+  // 获得一列
   RC get_column(Chunk &chunk, Column &column) override;
-
+  // 获得tuple 的该字段的一个 value
   RC get_value(const Tuple &tuple, Value &value) const override;
 
 private:

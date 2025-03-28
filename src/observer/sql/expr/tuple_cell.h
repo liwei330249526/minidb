@@ -16,7 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "storage/field/field_meta.h"
 #include <iostream>
-
+// 包括表名，列名
 class TupleCellSpec final
 {
 public:

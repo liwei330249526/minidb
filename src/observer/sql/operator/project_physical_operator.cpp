@@ -55,6 +55,7 @@ RC ProjectPhysicalOperator::close()
   }
   return RC::SUCCESS;
 }
+// project 从 child 获取一个tuple， 设置给自己
 Tuple *ProjectPhysicalOperator::current_tuple()
 {
   tuple_.set_tuple(children_[0]->current_tuple());

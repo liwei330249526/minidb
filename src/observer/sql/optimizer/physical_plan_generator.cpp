@@ -303,7 +303,7 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   oper->add_child(std::move(child_phy_oper));
   return rc;
 }
-
+// 投影逻辑算子，构造一个投影物理算子
 RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, unique_ptr<PhysicalOperator> &oper)
 {
   vector<unique_ptr<LogicalOperator>> &child_opers = project_oper.children();
@@ -313,16 +313,17 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   RC rc = RC::SUCCESS;
   if (!child_opers.empty()) {
     LogicalOperator *child_oper = child_opers.front().get();
-
+    // 构造投影的 儿子 算子
     rc = create(*child_oper, child_phy_oper);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to create project logical operator's child physical operator. rc=%s", strrc(rc));
       return rc;
     }
   }
-  // 投影算子的 子 是 get 算子
+  // 投影算子的 子 是 get 算子; 投影逻辑算子的表达式复制给投影物理算子
   auto project_operator = make_unique<ProjectPhysicalOperator>(std::move(project_oper.expressions()));
   if (child_phy_oper) {
+    // 将儿子物理算子设置给投影物理算子
     project_operator->add_child(std::move(child_phy_oper));
   }
 

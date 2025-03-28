@@ -27,10 +27,12 @@ public:
   ExpressionTuple(const std::vector<ExprPointerType> &expressions) : expressions_(expressions) {}
   virtual ~ExpressionTuple() = default;
 
+  // 设置tuple
   void set_tuple(const Tuple *tuple) { child_tuple_ = tuple; }
 
+  // 表达式个数
   int cell_num() const override { return static_cast<int>(expressions_.size()); }
-
+  // 获取第 index 个表达式
   RC cell_at(int index, Value &cell) const override
   {
     if (index < 0 || index >= cell_num()) {
@@ -40,7 +42,7 @@ public:
     const ExprPointerType &expression = expressions_[index];
     return get_value(expression, cell); // 最终调用到 getValue 后去表达式的值
   }
-
+  // 获取第 index 个表达式的名字对应的 元组名字
   RC spec_at(int index, TupleCellSpec &spec) const override
   {
     if (index < 0 || index >= cell_num()) {
@@ -51,10 +53,11 @@ public:
     spec                              = TupleCellSpec(expression->name());
     return RC::SUCCESS;
   }
-
+  // 通过元素名字获取元素的值
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override
   {
     RC rc = RC::SUCCESS;
+    // 如果有子tuple， 则从子 tuple 获取元素
     if (child_tuple_ != nullptr) {
       rc = child_tuple_->find_cell(spec, cell);
       if (OB_SUCC(rc)) {
@@ -63,6 +66,7 @@ public:
     }
 
     rc = RC::NOTFOUND;
+    // 遍历每个表达式，如果表达式的名字和入参的 元素名字匹配，则获取表达式的值
     for (const ExprPointerType &expression : expressions_) {
       if (0 == strcmp(spec.alias(), expression->name())) {
         rc = get_value(expression, cell);

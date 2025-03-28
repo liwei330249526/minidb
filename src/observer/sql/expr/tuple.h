@@ -221,7 +221,8 @@ public:
     if (0 != strcmp(table_name, table_->name())) {
       return RC::NOTFOUND;
     }
-
+    // 一行数据的元组，包括一行数据，表，和字段集合； 这里遍历字段集合，找到要查询的字段的 index；
+    // 通过 cell_at(i, cell); 获取该行，该字段的数据。
     for (size_t i = 0; i < speces_.size(); ++i) {
       const FieldExpr *field_expr = speces_[i];
       const Field     &field      = field_expr->field();
@@ -326,9 +327,9 @@ public:
 
   void set_names(const std::vector<TupleCellSpec> &specs) { specs_ = specs; }
   void set_cells(const std::vector<Value> &cells) { cells_ = cells; }
-
+  // 有几个值
   virtual int cell_num() const override { return static_cast<int>(cells_.size()); }
-
+  // 获取第 index 个值
   virtual RC cell_at(int index, Value &cell) const override
   {
     if (index < 0 || index >= cell_num()) {
@@ -338,7 +339,7 @@ public:
     cell = cells_[index];
     return RC::SUCCESS;
   }
-
+  // 获取第 index 个 spec
   RC spec_at(int index, TupleCellSpec &spec) const override
   {
     if (index < 0 || index >= cell_num()) {
@@ -354,6 +355,7 @@ public:
     ASSERT(cells_.size() == specs_.size(), "cells_.size()=%d, specs_.size()=%d", cells_.size(), specs_.size());
 
     const int size = static_cast<int>(specs_.size());
+    // 遍历每个值的描述(名字)， 如果找到了这个值， 通过i,  cells_[i] 获取值，
     for (int i = 0; i < size; i++) {
       if (specs_[i].equals(spec)) {
         cell = cells_[i];
@@ -363,22 +365,25 @@ public:
     return RC::NOTFOUND;
   }
 
+  // 通过元组，构造 ValueListTuple
   static RC make(const Tuple &tuple, ValueListTuple &value_list)
   {
+    // 遍历元组的每个元素
     const int cell_num = tuple.cell_num();
     for (int i = 0; i < cell_num; i++) {
+      // 获取元素值
       Value cell;
       RC    rc = tuple.cell_at(i, cell);
       if (OB_FAIL(rc)) {
         return rc;
       }
-
+      // 获取元素名字
       TupleCellSpec spec;
       rc = tuple.spec_at(i, spec);
       if (OB_FAIL(rc)) {
         return rc;
       }
-
+      // 加入到 ValueListTuple 的元素和名字集合
       value_list.cells_.push_back(cell);
       value_list.specs_.push_back(spec);
     }
@@ -402,20 +407,24 @@ public:
   JoinedTuple()          = default;
   virtual ~JoinedTuple() = default;
 
+  // 设置左右 tuple
   void set_left(Tuple *left) { left_ = left; }
   void set_right(Tuple *right) { right_ = right; }
   Tuple * get_left() const { return left_; }
   Tuple * get_right() const { return right_; }
 
+  // 总元素个数， left + right
   int cell_num() const override { return left_->cell_num() + right_->cell_num(); }
 
+  // 获取第 index 个元素
   RC cell_at(int index, Value &value) const override
   {
+    // 如果index 落在左边，则获取左边的元素
     const int left_cell_num = left_->cell_num();
     if (index >= 0 && index < left_cell_num) {
       return left_->cell_at(index, value);
     }
-
+    // 如果index 落在右边，则获取右边的元素
     if (index >= left_cell_num && index < left_cell_num + right_->cell_num()) {
       return right_->cell_at(index - left_cell_num, value);
     }
@@ -425,11 +434,12 @@ public:
 
   RC spec_at(int index, TupleCellSpec &spec) const override
   {
+    // 如果index 落在左边，则获取左边的名字
     const int left_cell_num = left_->cell_num();
     if (index >= 0 && index < left_cell_num) {
       return left_->spec_at(index, spec);
     }
-
+    // 如果index 落在右边，则获取右边的名字
     if (index >= left_cell_num && index < left_cell_num + right_->cell_num()) {
       return right_->spec_at(index - left_cell_num, spec);
     }
@@ -439,6 +449,7 @@ public:
 
   RC find_cell(const TupleCellSpec &spec, Value &value) const override
   {
+    // tuple 通过名字获取值
     RC rc = left_->find_cell(spec, value); // left RowTuple
     if (rc == RC::SUCCESS || rc != RC::NOTFOUND) {
       return rc;
