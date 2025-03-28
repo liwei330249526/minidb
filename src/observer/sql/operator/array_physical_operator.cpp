@@ -47,8 +47,7 @@ RC ArrayPhysicalOperator::next() {
 
 //    std::cout << "get a tuple: " << current_tuple_->to_string() << std::endl;
     current_index_++;
-    break;
-
+    return rc;
   }
   if (current_index_ >= values_.size()) {
     return RC::RECORD_EOF;
