@@ -75,7 +75,7 @@ private:
 
 private:
     Trx *trx_ = nullptr;
-    Expression *left_filed_;
+    Expression *left_filed_; // id in (subquery), 做表的 filed_;    (subquery) in (subquery))
     PhysicalOperator *left_ = nullptr;
     PhysicalOperator *right_ = nullptr;
     Tuple *left_tuple_ = nullptr;

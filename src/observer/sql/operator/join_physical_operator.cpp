@@ -187,7 +187,12 @@ RC HashSemiJoinPhysicalOperator::next() {
 
     Value left_value;
 //    left_tuple_->get_value(0, left_value); // 获取左表比较值
-    left_filed_->get_value(*left_tuple_, left_value);
+    if (left_filed_ != nullptr) {
+      left_filed_->get_value(*left_tuple_, left_value);  // 支持语句 id in (subquery), 做表的 filed_;
+    } else {
+      left_tuple_->cell_at(0, left_value);  // 支持语句 (subquery) in (subquery))
+    }
+
 //    left_tuple_->cell_at(0, left_value);
     // 在哈希表中查找匹配
     string keyStr = left_value.to_string();
