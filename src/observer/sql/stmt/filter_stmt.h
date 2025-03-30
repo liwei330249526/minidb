@@ -123,7 +123,8 @@ public:
   virtual ~FilterStmt();
 
 public:
-  const std::vector<FilterUnit *> &filter_units() const { return filter_units_; }
+  const std::vector<FilterUnit *> &filter_units() const { return filter_units_; }  // 如果函数是 const 成员函数，那么应该返回一个常量引用
+  std::vector<FilterUnit *> &filter_units() { return filter_units_; }
 
 public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,

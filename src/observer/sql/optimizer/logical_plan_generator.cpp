@@ -267,33 +267,32 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, std::unique_ptr<Lo
 {
   RC                                  rc = RC::SUCCESS;
   std::vector<unique_ptr<Expression>> cmp_exprs;
-  const std::vector<FilterUnit *>    &filter_units = filter_stmt->filter_units();
+  std::vector<FilterUnit *>    &filter_units = filter_stmt->filter_units();
   for (FilterUnit *filter_unit : filter_units) {
     FilterObj &filter_obj_left  = filter_unit->left();
     FilterObj &filter_obj_right = filter_unit->right();
-
     // 左边是列，或值， 或算数表达式,
     unique_ptr<Expression> left;
-    if (filter_obj_left.is_attr == 0) {
-      left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
-    } else if (filter_obj_left.is_attr == 1) {
-      left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
-    } else if (filter_obj_left.is_attr == 2) {
+//    if (filter_obj_left.is_attr == 0) {
+//      left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+//    } else if (filter_obj_left.is_attr == 1) {
+//      left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
+//    } else if (filter_obj_left.is_attr == 2) {
       left = std::move(filter_obj_left.expression) ;
-    } else if (filter_obj_left.is_attr == 3) {
-      left = unique_ptr<Expression>(new ValueExpr(Value(1)));
-    }
+//    } else if (filter_obj_left.is_attr == 3) {
+//      left = unique_ptr<Expression>(new ValueExpr(Value(1)));
+//    }
 
     unique_ptr<Expression> right;
-    if (filter_obj_right.is_attr == 0) {
-      right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
-    } else if (filter_obj_right.is_attr == 1) {
-      right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
-    } else if (filter_obj_right.is_attr == 2) {
+//    if (filter_obj_right.is_attr == 0) {
+//      right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+//    } else if (filter_obj_right.is_attr == 1) {
+//      right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
+//    } else if (filter_obj_right.is_attr == 2) {
       right = std::move(filter_obj_right.expression);
-    } else if (filter_obj_right.is_attr == 3) {
-      right = unique_ptr<Expression>(new ValueExpr(Value(1)));
-    }
+//    } else if (filter_obj_right.is_attr == 3) {
+//      right = unique_ptr<Expression>(new ValueExpr(Value(1)));
+//    }
 //    unique_ptr<Expression> left(filter_obj_left.is_attr
 //                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
 //                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
@@ -302,6 +301,8 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, std::unique_ptr<Lo
 //                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
 //                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
     // 如果left 和right 的类型不相等，则满足需要； 即例如 age>10, 即左边是列名，右边是值
+    // 创建子查询的逻辑计划
+    create_sub_query_plan(left, right);
     if (left->value_type() != right->value_type()) {
       // 计算 left 转换为 right 类型的cost； 和right 转换为 left 类型的cost
       auto left_to_right_cost = implicit_cast_cost(left->value_type(), right->value_type());
@@ -349,12 +350,15 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, std::unique_ptr<Lo
     }
     // 比较表达式， op, 左边， 右边
     ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
+    // cmp 集合
     cmp_exprs.emplace_back(cmp_expr);
   }
 
   unique_ptr<PredicateLogicalOperator> predicate_oper;
   if (!cmp_exprs.empty()) {
+    // cmp表达式集合, 给 conj 表达式， 用 and 连接
     unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(ConjunctionExpr::Type::AND, cmp_exprs));
+    // conj 表达式给了 predict 的 expression
     predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr)));
   }
 
@@ -632,4 +636,21 @@ RC LogicalPlanGenerator::create_plan(UpdateStmt *update_stmt, unique_ptr<Logical
 
 	logical_operator = std::move(update_oper);
 	return rc;
+}
+
+RC LogicalPlanGenerator::create_sub_query_plan(unique_ptr<Expression> &left, unique_ptr<Expression> &right) {
+  RC rc = RC::SUCCESS;
+  if (left->type() == ExprType::SUBSELECT) {
+    SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(left.get());
+    unique_ptr<LogicalOperator> sub_oper;
+    create_plan(sub_sql->getExpSelect(), sub_oper);
+    sub_sql->setSubQueryLogicPlan(sub_oper);
+  }
+  if (right->type() == ExprType::SUBSELECT) {
+    SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right.get());
+    unique_ptr<LogicalOperator> sub_oper;
+    create_plan(sub_sql->getExpSelect(), sub_oper);
+    sub_sql->setSubQueryLogicPlan(sub_oper);
+  }
+  return rc;
 }

@@ -19,6 +19,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/expression_binder.h"
 #include "sql/expr/expression_iterator.h"
 
+#include <src/observer/sql/stmt/stmt.h>
+#include "src/observer/sql/stmt/select_stmt.h"
+
 using namespace std;
 using namespace common;
 
@@ -533,6 +536,7 @@ RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
   }
   // 如果是子查询, 则递归create stmt
   if (expr->type() == ExprType::SUBSELECT) {
+    // 入参的 expr 类型转换为 SubqueryExpr
     SubqueryExpr *sub_sql =  static_cast<SubqueryExpr *>(expr.get());
     Stmt          *stmt     = nullptr;
     // 这个接口的的出 stmt 执行的是函数内部 new 的一块动态内存; 需要使用者释放
@@ -542,6 +546,7 @@ RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
       return rc;
     }
     sub_sql->setExpSelect(static_cast<SelectStmt *>(stmt));  // 子查询
+    // 入参的 epxr 给了出参的 bound_expressions
     bound_expressions.emplace_back(std::move(expr));
   }
 

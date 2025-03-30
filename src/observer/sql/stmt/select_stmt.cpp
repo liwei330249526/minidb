@@ -102,6 +102,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   	}
   }
   // create filter statement in `where` statement
+  // 创建 fllter
   FilterStmt *filter_stmt = nullptr;
   rc          = FilterStmt::create(db,
       default_table,

@@ -34,9 +34,10 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
 {
   RC rc = RC::SUCCESS;
   stmt  = nullptr;
-
+  // flter stmt 动态内存
   FilterStmt *tmp_stmt = new FilterStmt();
   for (int i = 0; i < condition_num; i++) {
+    // 空指针，以引用传参，内部指定动态内存
     FilterUnit *filter_unit = nullptr;
 
     rc = create_filter_unit(db, default_table, tables, conditions[i], filter_unit);
@@ -47,7 +48,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
     }
     tmp_stmt->filter_units_.push_back(filter_unit);
   }
-
+  // 指针给出参
   stmt = tmp_stmt;
   return rc;
 }
@@ -90,7 +91,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     LOG_WARN("invalid compare operator : %d", comp);
     return RC::INVALID_ARGUMENT;
   }
-
+  // 内部创建内存，外部释放
   filter_unit = new FilterUnit;
   // 左边是属性，即列名
 	BinderContext binder_context;
@@ -98,90 +99,91 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 	for (auto &tb : *tables) {
 		binder_context.add_table(tb.second);
 	}
-  if (condition.left_is_attr == 1) {
-    Table           *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc                     = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    FilterObj filter_obj;
-    filter_obj.init_attr(Field(table, field));
-    filter_unit->set_left(filter_obj);
-  } else if (condition.left_is_attr == 0){
-  	// 左边是值
-    FilterObj filter_obj;
-    filter_obj.init_value(condition.left_value);
-    filter_unit->set_left(filter_obj);
-  } else if (condition.left_is_attr == 2) {
+//  if (condition.left_is_attr == 1) {
+//    Table           *table = nullptr;
+//    const FieldMeta *field = nullptr;
+//    rc                     = get_table_and_field(db, default_table, tables, condition.left_attr, table, field);
+//    if (rc != RC::SUCCESS) {
+//      LOG_WARN("cannot find attr");
+//      return rc;
+//    }
+//    FilterObj filter_obj;
+//    filter_obj.init_attr(Field(table, field));
+//    filter_unit->set_left(filter_obj);
+//  } else if (condition.left_is_attr == 0){
+//  	// 左边是值
+//    FilterObj filter_obj;
+//    filter_obj.init_value(condition.left_value);
+//    filter_unit->set_left(filter_obj);
+//  } else if (condition.left_is_attr == 2) {
   	// 左边是表达式
-	  FilterObj filter_obj;
+	  FilterObj left_filter_obj;
 //	  BinderContext binder_context;
 //	  binder_context.add_table(default_table);
 	  // collect query fields in `select` statement
-	  vector<unique_ptr<Expression>> bound_expressions;
-	  ExpressionBinder expression_binder(binder_context);
+	  vector<unique_ptr<Expression>> left_bound_expressions;
+	  ExpressionBinder left_expression_binder(binder_context);
 
 	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
 	  unique_ptr<Expression> left_expr(condition.left_expression);
-	  RC rc = expression_binder.bind_expression(left_expr, bound_expressions);
+	  rc = left_expression_binder.bind_expression(left_expr, left_bound_expressions);
 	  if (OB_FAIL(rc)) {
 		  LOG_INFO("bind expression failed. rc=%s", strrc(rc));
 		  return rc;
     }
-	  filter_obj.init_expression(std::move(bound_expressions.front()));
+	  // 绑定表的表达式的第[0] 个作为出参
+    left_filter_obj.init_expression(std::move(left_bound_expressions.front()));
 
-	  filter_unit->set_left(filter_obj);
-  } else if (condition.right_is_attr == 3){
-    // 值列表
-    // 左边是值
-    FilterObj filter_obj;
-    filter_obj.init_values(condition.left_values);
-    filter_unit->set_left(filter_obj);
-  }
+	  filter_unit->set_left(left_filter_obj);
+//  } else if (condition.right_is_attr == 3){
+//    // 值列表
+//    // 左边是值
+//    FilterObj filter_obj;
+//    filter_obj.init_values(condition.left_values);
+//    filter_unit->set_left(filter_obj);
+//  }
 	// 右边是属性，即列名
-  if (condition.right_is_attr == 1) {
-    Table           *table = nullptr;
-    const FieldMeta *field = nullptr;
-    rc                     = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("cannot find attr");
-      return rc;
-    }
-    FilterObj filter_obj;
-    filter_obj.init_attr(Field(table, field));
-    filter_unit->set_right(filter_obj);
-  } else if (condition.right_is_attr == 0) {
-  	// 右边是值
-    FilterObj filter_obj;
-    filter_obj.init_value(condition.right_value);
-    filter_unit->set_right(filter_obj);
-  }  else if (condition.right_is_attr == 2){
+//  if (condition.right_is_attr == 1) {
+//    Table           *table = nullptr;
+//    const FieldMeta *field = nullptr;
+//    rc                     = get_table_and_field(db, default_table, tables, condition.right_attr, table, field);
+//    if (rc != RC::SUCCESS) {
+//      LOG_WARN("cannot find attr");
+//      return rc;
+//    }
+//    FilterObj filter_obj;
+//    filter_obj.init_attr(Field(table, field));
+//    filter_unit->set_right(filter_obj);
+//  } else if (condition.right_is_attr == 0) {
+//  	// 右边是值
+//    FilterObj filter_obj;
+//    filter_obj.init_value(condition.right_value);
+//    filter_unit->set_right(filter_obj);
+//  }  else if (condition.right_is_attr == 2){
   	// 右边是表达式
-	  FilterObj filter_obj;
+	  FilterObj right_filter_obj;
 
 	  // collect query fields in `select` statement
 //	  BinderContext binder_context;
 //	  binder_context.add_table(default_table);
-	  vector<unique_ptr<Expression>> bound_expressions;
-	  ExpressionBinder expression_binder(binder_context);
+	  vector<unique_ptr<Expression>> right_bound_expressions;
+	  ExpressionBinder right_expression_binder(binder_context);
 	  // 遍历未绑定的表达式，绑定， 获得绑定的表达式 Vector
 	  unique_ptr<Expression> right_expr(condition.right_expression);
-	  rc = expression_binder.bind_expression(right_expr, bound_expressions);
+	  rc = right_expression_binder.bind_expression(right_expr, right_bound_expressions);
 	  if (OB_FAIL(rc)) {
 		  LOG_INFO("bind expression failed. rc=%s", strrc(rc));
 		  return rc;
 	  }
-	  filter_obj.init_expression(std::move(bound_expressions.front()));
-	  filter_unit->set_right(filter_obj);
-  } else if (condition.right_is_attr == 3){
-    // 值列表
-    // 左边是值
-    FilterObj filter_obj;
-    filter_obj.init_values(condition.right_values);
-    filter_unit->set_right(filter_obj);
-  }
+   right_filter_obj.init_expression(std::move(right_bound_expressions.front()));
+	  filter_unit->set_right(right_filter_obj);
+//  } else if (condition.right_is_attr == 3){
+//    // 值列表
+//    // 左边是值
+//    FilterObj filter_obj;
+//    filter_obj.init_values(condition.right_values);
+//    filter_unit->set_right(filter_obj);
+//  }
 	// 设置操作符
   filter_unit->set_comp(comp);
 

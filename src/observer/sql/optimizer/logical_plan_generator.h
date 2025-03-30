@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <memory>
+#include <src/observer/sql/expr/expression.h>
 
 #include "common/rc.h"
 #include "common/type/attr_type.h"
@@ -52,4 +53,7 @@ private:
   RC create_group_by_plan(SelectStmt *select_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
 
   int implicit_cast_cost(AttrType from, AttrType to);
+
+  // 创建子查询逻辑计划
+  RC create_sub_query_plan(unique_ptr<Expression> &left, unique_ptr<Expression> &right);
 };

@@ -17,6 +17,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/tuple.h"
 #include "sql/expr/arithmetic_operator.hpp"
 
+#include "sql/stmt/select_stmt.h"
+#include "sql/operator/logical_operator.h"
+
 using namespace std;
 
 RC FieldExpr::get_value(const Tuple &tuple, Value &value) const
@@ -900,3 +903,13 @@ const string &SubqueryExpr::getFiledName() const {
 void SubqueryExpr::setFiledName(const string &filedName) {
   filed_name_ = filedName;
 }
+
+ unique_ptr<LogicalOperator> &SubqueryExpr::getSubQueryLogicPlan()  {
+  return sub_query_logic_plan_;
+}
+
+void SubqueryExpr::setSubQueryLogicPlan( unique_ptr<LogicalOperator> &subQueryLogicPlan) {
+  sub_query_logic_plan_ = std::move(subQueryLogicPlan);
+}
+
+SubqueryExpr::SubqueryExpr(ParsedSqlNode *subSel) : subSel_(subSel) {}

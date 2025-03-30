@@ -16,7 +16,6 @@ See the Mulan PSL v2 for more details. */
 
 #include <memory>
 #include <string>
-#include <src/observer/sql/stmt/select_stmt.h>
 
 #include "common/value.h"
 #include "storage/field/field.h"
@@ -24,6 +23,10 @@ See the Mulan PSL v2 for more details. */
 #include "storage/common/chunk.h"
 
 class Tuple;
+class ParsedSqlNode;
+class SelectStmt;
+class LogicalOperator;
+class PhysicalOperator;
 
 /**
  * @defgroup Expression
@@ -544,19 +547,13 @@ public:
  * */
 class SubqueryExpr : public Expression {
 public:
-    SubqueryExpr(ParsedSqlNode *select_stmt)
-            : subSel_(select_stmt) {}
+    SubqueryExpr(ParsedSqlNode *subSel);
 //    SubqueryExpr(ParsedSqlNode *select_stmt)
 //            : subSel_(select_stmt) {}
+// 当用于析构函数时，virtual 关键字的作用是保证在通过基类指针或引用删除派生类对象时，能正确调用派生类的析构函数。要是基类的析构函数不是虚函数，那么在使用基类指针删除派生类对象时，只会调用基类的析构函数，派生类的析构函数不会被调用，这可能会造成资源泄漏。
+// 对于析构函数使用 = default;，意味着使用编译器自动生成的析构函数，该析构函数会自动调用基类的析构函数和成员对象的析构函数。如果类没有特殊的资源管理需求，使用 = default; 可以简化代码
+    virtual ~SubqueryExpr() = default;
 
-    ~SubqueryExpr() {
-      if (subSel_ != nullptr) {
-        delete subSel_;
-      }
-      if (exp_select_ != nullptr) {
-        delete exp_select_;
-      }
-    }
     ExprType type() const override { return ExprType::SUBSELECT; }
     RC get_value(const Tuple &tuple, Value &value) const override;
     AttrType value_type() const override;
@@ -582,6 +579,13 @@ private:
     SelectStmt *exp_select_;  // 可以用 stmt 父类指针，也可以用 SelectStmt 指针
 
     // 用uniq 指针即可
+    unique_ptr<LogicalOperator> sub_query_logic_plan_;
+public:
+    unique_ptr<LogicalOperator> &getSubQueryLogicPlan();
+
+    void setSubQueryLogicPlan(unique_ptr<LogicalOperator> &subQueryLogicPlan);
+
+private:
     // 逻辑算子
     // 物理算子
 
