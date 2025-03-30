@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/select_stmt.h"
 #include "sql/operator/logical_operator.h"
+#include "sql/operator/physical_operator.h"
 
 using namespace std;
 
@@ -211,6 +212,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
 		  case IN_OP: {
         result = (0 == cmp_result);
 		  } break;
+      case NOT_IN_OP: {
+        result = (0 == cmp_result);
+      } break;
 		  default: {
 			  LOG_WARN("unsupported comparison. %d", comp_);
 			  rc = RC::INTERNAL;
@@ -273,24 +277,168 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
 //    value.set_boolean(bool_value);
 //    return RC::SUCCESS;
 //  }
-  // 获取右边的值
-  RC rc = left_->get_value(tuple, left_value); // 左边是表达式
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
+  // 1 left 是子查询 ，且 right 也是子查询
+  if (left_->type() == ExprType::SUBSELECT && right_->type() == ExprType::SUBSELECT) {
+     // left, right 都为1行数据
+    Value tem;
+    RC rc = left_->get_value(tuple, left_value);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+    rc = left_->get_value(tuple, tem);
+    if (rc != RC::RECORD_EOF) {
+      LOG_DEBUG("left is subquery , right is subquery, left return above 1 row");
+      return RC::INTERNAL;
+    }
+
+    rc = right_->get_value(tuple, right_value);
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+    rc = right_->get_value(tuple, tem);
+    if (rc != RC::RECORD_EOF) {
+      LOG_DEBUG("left is subquery , right is subquery, right return above 1 row");
+      return RC::INTERNAL;
+    }
+    // 比较计算
+    rc = compare_value(left_value, right_value, bool_value);
+    if (rc == RC::SUCCESS) {
+      value.set_boolean(bool_value);
+    }
+    return rc;
+  } else if (left_->type() == ExprType::SUBSELECT || right_->type() == ExprType::SUBSELECT) {
+    // 2 left 是子查询， 或 right 是子查询
+    // 如果是 exist, not exist, in , not in; 则子查询可以有多行
+    // 如果不是 exist, not exist, in , not in; 则子查询只能有一行
+    Expression *sub_query = nullptr;
+    Expression *other = nullptr;
+    Value *sub_query_value;
+    Value *other_value;
+    if (left_->type() == ExprType::SUBSELECT) {
+      sub_query = left_.get();
+      other = right_.get();
+      sub_query_value = &left_value;
+      other_value = &right_value;
+    } else {
+      sub_query = right_.get();
+      other = left_.get();
+
+      sub_query_value = &right_value;
+      other_value = &left_value;
+    }
+
+    if (comp_ == IN_OP || comp_ == NOT_IN_OP || comp_ == EXISTS_OP || comp_ == NOT_EXISTS_OP) {
+      // subquery 可以有多行
+      // 扫描，直到一个成功，返回true； 否则，返回 false
+      RC rc = other->get_value(tuple, *other_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+      while ((rc = sub_query->get_value(tuple, *sub_query_value)) == RC::SUCCESS) {
+        // 如果成功，则已知获取数据
+        // 成功获取数据
+        if (comp_ == EXISTS_OP) {
+          // 结束了，没有发现，则false
+          // 有一个，则true
+          value.set_boolean(true);
+          return rc;
+        } else if (comp_ == NOT_EXISTS_OP) {
+          // 结束了，没有发现则true
+          // 有一个，则false
+          value.set_boolean(false);
+          return rc;
+        } else if (comp_ == IN_OP){
+          // 比较计算
+          rc = compare_value(left_value, right_value, bool_value);
+          if (rc != RC::SUCCESS) {
+            return rc;
+          }
+          // 扫描到一个成功的; 即返回true; 结束后为匹配则返回 false 子查询可能要扫描多次; 所以 EOF 后要重新打开
+          // 3   [1,2,3,4,5], 扫描到3 的时候，返回true；    3.5， 扫描到尾部，返回false；
+          if (bool_value) {
+            value.set_boolean(true);
+            return rc;
+          }
+        } else {
+          // NOT IN OP
+          // 比较计算
+          rc = compare_value(left_value, right_value, bool_value);
+          if (rc != RC::SUCCESS) {
+            return rc;
+          }
+          // 扫描到一个成功的; 即返回true;  子查询可能要扫描多次; 所以 EOF 后要重新打开
+          // 不在集合中；
+          // 3   [1,2,3,4,5], 扫描到3 的时候，返回 false；    3.5， 扫描到尾部，返回 true；
+          if (bool_value) {  // 返回ture, 是不等, 所有都不等，才会true;   返回 false， 是相等, 有一个相等, 即符合 not in false；
+            value.set_boolean(false);
+            return rc;
+          }
+        }
+      }
+      if (rc != RC::RECORD_EOF) {
+        return rc;
+      }
+
+      // 扫描结束了，还没有一个成功的，则失败
+      if(comp_ == EXISTS_OP) {
+        value.set_boolean(false);
+      } else if (comp_ == NOT_EXISTS_OP) {
+        value.set_boolean(true);
+      } else if (comp_ == IN_OP) {
+        value.set_boolean(false);
+      } else {
+        // NOT IN OP
+        value.set_boolean(true);
+      }
+      return rc;
+
+    } else {
+      // subquery 只能有一行
+      Value tem;
+      RC rc = sub_query->get_value(tuple, *sub_query_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+      rc = sub_query->get_value(tuple, tem);
+      if (rc != RC::RECORD_EOF) {
+        LOG_DEBUG("left is subquery , right is subquery, left return above 1 row");
+        return RC::INTERNAL;
+      }
+
+      rc = other->get_value(tuple, *other_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+
+      // 比较计算
+      rc = compare_value(left_value, right_value, bool_value);
+      if (rc == RC::SUCCESS) {
+        value.set_boolean(bool_value);
+      }
+      return rc;
+    }
+  } else {
+    // 3 left, right 都不是子查询
+    // 原有逻辑
+    // 获取右边的值
+    RC rc = left_->get_value(tuple, left_value); // 左边是表达式
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
+      return rc;
+    }
+    // 获取右边的值
+    rc = right_->get_value(tuple, right_value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
+      return rc;
+    }
+    // 比较计算
+    rc = compare_value(left_value, right_value, bool_value);
+    if (rc == RC::SUCCESS) {
+      value.set_boolean(bool_value);
+    }
     return rc;
   }
-  // 获取右边的值
-  rc = right_->get_value(tuple, right_value);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
-    return rc;
-  }
-  // 比较计算
-  rc = compare_value(left_value, right_value, bool_value);
-  if (rc == RC::SUCCESS) {
-    value.set_boolean(bool_value);
-  }
-  return rc;
 }
 
 RC ComparisonExpr::eval(Chunk &chunk, std::vector<uint8_t> &select)
@@ -855,19 +1003,61 @@ float VectorFunctionExpr::inner_product(const vector<float> &A, const vector<flo
 
 RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
   RC rc = RC::SUCCESS;
-  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple); // 假定，子查询都有join算子
-  Tuple *tup = jtuple->get_right();
-  int cell_num = tup->cell_num();
-  for (int i = 0; i < cell_num; i++) {
-    rc = tup->cell_at(i, value);
+//  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple); // 假定，子查询都有join算子
+//  Tuple *tup = jtuple->get_right();
+//  int cell_num = tup->cell_num();
+//  for (int i = 0; i < cell_num; i++) {
+//    rc = tup->cell_at(i, value);
+//    if (rc != RC::SUCCESS) {
+//      LOG_WARN("failed to get tuple cell value. rc=%s", strrc(rc));
+//      return rc;
+//    }
+//    // 读取的每个值，str
+//    string cell_str = value.to_string();
+//    break;
+//  }
+
+//  while (RC::SUCCESS == (rc = oper->next())) {
+//    Tuple *tuple = oper->current_tuple();
+//    if (nullptr == tuple) {
+//      rc = RC::INTERNAL;
+//      LOG_WARN("failed to get tuple from operator");
+//      break;
+//    }
+  // 子查询获取值， 即从物理计划中获取值
+  if(!isOpen()) {
+    rc = open_sub_query();
     if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to get tuple cell value. rc=%s", strrc(rc));
       return rc;
     }
-    // 读取的每个值，str
-    string cell_str = value.to_string();
-    break;
   }
+
+//  const unique_ptr<PhysicalOperator> &sub_query_physical_plan = getSubQueryPhysicalPlan();
+  rc = sub_query_physical_plan_->next();
+  if (rc != RC::SUCCESS) {
+    if (rc == RC::RECORD_EOF) {
+      RC rct = close_sub_query(); // 未打开状态
+      if (rct != RC::SUCCESS) {
+        return rct;
+      }
+    }
+    return rc;
+  }
+
+  Tuple *sub_tuple = sub_query_physical_plan_->current_tuple();
+  if (nullptr == sub_tuple) {
+    rc = RC::INTERNAL;
+    LOG_WARN("failed to get tuple from operator");
+    return rc;
+  }
+
+  if (sub_tuple->cell_num() > 1) {
+    rc = RC::INTERNAL;
+    LOG_WARN("subquery cell must do not above 1");
+    return rc;
+  }
+  // 返回 value
+  sub_tuple->cell_at(0, value);
   return rc;
 }
 
@@ -912,4 +1102,43 @@ void SubqueryExpr::setSubQueryLogicPlan( unique_ptr<LogicalOperator> &subQueryLo
   sub_query_logic_plan_ = std::move(subQueryLogicPlan);
 }
 
-SubqueryExpr::SubqueryExpr(ParsedSqlNode *subSel) : subSel_(subSel) {}
+SubqueryExpr::SubqueryExpr(ParsedSqlNode *subSel) : subSel_(subSel){
+  is_open_ = false;
+  trx_ = nullptr;
+}
+
+const unique_ptr<PhysicalOperator> & SubqueryExpr::getSubQueryPhysicalPlan() const {
+  return sub_query_physical_plan_;
+}
+
+void SubqueryExpr::setSubQueryPhysicalPlan(unique_ptr<PhysicalOperator> &subQueryPhysicalPlan) {
+  sub_query_physical_plan_ = std::move(subQueryPhysicalPlan);
+}
+
+bool SubqueryExpr::isOpen() const {
+  return is_open_;
+}
+
+void SubqueryExpr::setIsOpen(bool isOpen) const {
+  is_open_ = isOpen;
+}
+
+RC SubqueryExpr::open_sub_query() const {
+  RC rc = RC::SUCCESS;
+  rc = sub_query_physical_plan_->open(trx_);
+  if (rc == RC::SUCCESS) {
+    is_open_ = true;
+  }
+
+  return rc;
+}
+
+RC SubqueryExpr::close_sub_query() const {
+  RC rc = RC::SUCCESS;
+  rc = sub_query_physical_plan_->close();
+  if (rc == RC::SUCCESS) {
+    is_open_ = false;
+  }
+  return rc;
+}
+

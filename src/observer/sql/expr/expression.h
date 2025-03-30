@@ -530,14 +530,6 @@ private:
     std::unique_ptr<Expression> right_;
 };
 
-// 值列表表达式
-class ValueListExpr : public Expression {
-    ValueListExpr() = default;
-public:
-    ExprType type() const override { return ExprType::VALUE_LIST; }
-    std::vector<Value> values;         ///< 要插入的值
-};
-
 // 子查询表达式
 /*
  *
@@ -572,6 +564,20 @@ public:
     const string &getFiledName() const;
 
     void setFiledName(const string &filedName);
+
+    const unique_ptr<PhysicalOperator> & getSubQueryPhysicalPlan() const;
+    void setSubQueryPhysicalPlan(unique_ptr<PhysicalOperator> &subQueryPhysicalPlan);
+
+    unique_ptr<LogicalOperator> &getSubQueryLogicPlan();
+    void setSubQueryLogicPlan(unique_ptr<LogicalOperator> &subQueryLogicPlan);
+
+    bool isOpen() const;
+    void setIsOpen(bool isOpen) const ;
+
+
+
+    RC open_sub_query() const;
+    RC close_sub_query() const;
 private:
     // stmt，parser 后的子查询信息
     ParsedSqlNode * subSel_;
@@ -580,16 +586,21 @@ private:
 
     // 用uniq 指针即可
     unique_ptr<LogicalOperator> sub_query_logic_plan_;
-public:
-    unique_ptr<LogicalOperator> &getSubQueryLogicPlan();
 
-    void setSubQueryLogicPlan(unique_ptr<LogicalOperator> &subQueryLogicPlan);
-
-private:
-    // 逻辑算子
-    // 物理算子
-
+    // 用uniq 指针即可
+    unique_ptr<PhysicalOperator> sub_query_physical_plan_;
     AttrType attrType_;
     string table_name_;
     string filed_name_;
+    // 是否open了物理计划
+    mutable bool is_open_;
+    Trx *trx_;
+};
+
+// 值列表表达式
+class ValueListExpr : public Expression {
+    ValueListExpr() = default;
+public:
+    ExprType type() const override { return ExprType::VALUE_LIST; }
+    std::vector<Value> values;         ///< 要插入的值
 };
