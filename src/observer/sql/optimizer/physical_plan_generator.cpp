@@ -299,8 +299,9 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   ASSERT(expressions.size() == 1, "predicate logical operator's children should be 1");
 
   unique_ptr<Expression> expression = std::move(expressions.front());
-  // 创建子查询的物理计划并保存
 
+  // 创建子查询的物理计划并保存到 子查询表达式
+  create_sub_query_plan(expression);
 
   oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
   oper->add_child(std::move(child_phy_oper));
@@ -586,6 +587,52 @@ RC PhysicalPlanGenerator::create_vec_plan(ExplainLogicalOperator &explain_oper, 
   }
 
   oper = std::move(explain_physical_oper);
+  return rc;
+}
+
+RC PhysicalPlanGenerator::create_sub_query_plan(unique_ptr<Expression> &exp) {
+  RC rc = RC::SUCCESS;
+  // conj
+  if (exp->type() == ExprType::CONJUNCTION) {
+    ConjunctionExpr *cexp = reinterpret_cast<ConjunctionExpr*>(exp.get());
+    for (std::unique_ptr<Expression> &cop_exp_uniq : cexp->children()) {
+      // comp
+      if (cop_exp_uniq->type() == ExprType::COMPARISON) {
+        // 递归
+        create_sub_query_plan(cop_exp_uniq);
+//        ComparisonExpr *cop_exp = reinterpret_cast<ComparisonExpr*>(cop_exp_uniq.get());
+//        // sub select
+//        if (cop_exp->left()->type() == ExprType::SUBSELECT) {
+//          SubqueryExpr* subquery = reinterpret_cast<SubqueryExpr*>(cop_exp->left().get());
+//          unique_ptr<PhysicalOperator> physical_operator;
+//          create(*(subquery->getSubQueryLogicPlan()), physical_operator);
+//          subquery->setSubQueryPhysicalPlan(physical_operator);
+//        }
+//        if (cop_exp->right()->type() == ExprType::SUBSELECT) {
+//          SubqueryExpr* subquery = reinterpret_cast<SubqueryExpr*>(cop_exp->right().get());
+//          unique_ptr<PhysicalOperator> physical_operator;
+//          create(*(subquery->getSubQueryLogicPlan()), physical_operator);
+//          subquery->setSubQueryPhysicalPlan(physical_operator);
+//        }
+      }
+    }
+  } else if (exp->type() == ExprType::COMPARISON) {
+    ComparisonExpr *cop_exp = reinterpret_cast<ComparisonExpr*>(exp.get());
+    // sub select
+    if (cop_exp->left()->type() == ExprType::SUBSELECT) {
+      SubqueryExpr* subquery = reinterpret_cast<SubqueryExpr*>(cop_exp->left().get());
+      unique_ptr<PhysicalOperator> physical_operator;
+      create(*(subquery->getSubQueryLogicPlan()), physical_operator);
+      subquery->setSubQueryPhysicalPlan(physical_operator);
+    }
+    if (cop_exp->right()->type() == ExprType::SUBSELECT) {
+      SubqueryExpr* subquery = reinterpret_cast<SubqueryExpr*>(cop_exp->right().get());
+      unique_ptr<PhysicalOperator> physical_operator;
+      create(*(subquery->getSubQueryLogicPlan()), physical_operator);
+      subquery->setSubQueryPhysicalPlan(physical_operator);
+    }
+  }
+
   return rc;
 }
 
