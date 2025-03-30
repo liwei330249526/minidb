@@ -247,42 +247,42 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
   Value right_value;
   bool bool_value = false;
 
-  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple);
-  if (comp_ == IN_OP || comp_ == NOT_IN_OP) {
-    if (comp_ == IN_OP) {
-      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
-        // left 在 right 子查询中
-        bool_value = true;
-      } else {
-        // left 不在 right 子查询中
-        bool_value = false;
-      }
-    } else if (comp_ == NOT_IN_OP) {
-      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
-        // left 在 right 子查询中
-        bool_value = false;
-
-      } else {
-        // left 不在 right 子查询中
-        bool_value = true;
-      }
-    }
-    value.set_boolean(bool_value);
-    return RC::SUCCESS;
-  }
-
+//  const JoinedTuple * jtuple = dynamic_cast<const JoinedTuple *>(&tuple);
+//  if (comp_ == IN_OP || comp_ == NOT_IN_OP) {
+//    if (comp_ == IN_OP) {
+//      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
+//        // left 在 right 子查询中
+//        bool_value = true;
+//      } else {
+//        // left 不在 right 子查询中
+//        bool_value = false;
+//      }
+//    } else if (comp_ == NOT_IN_OP) {
+//      if (jtuple->get_left() != nullptr && jtuple->get_right() != nullptr) {
+//        // left 在 right 子查询中
+//        bool_value = false;
+//
+//      } else {
+//        // left 不在 right 子查询中
+//        bool_value = true;
+//      }
+//    }
+//    value.set_boolean(bool_value);
+//    return RC::SUCCESS;
+//  }
+  // 获取右边的值
   RC rc = left_->get_value(tuple, left_value); // 左边是表达式
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
-
+  // 获取右边的值
   rc = right_->get_value(tuple, right_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
     return rc;
   }
-
+  // 比较计算
   rc = compare_value(left_value, right_value, bool_value);
   if (rc == RC::SUCCESS) {
     value.set_boolean(bool_value);
@@ -354,6 +354,7 @@ RC ConjunctionExpr::get_value(const Tuple &tuple, Value &value) const
 {
   RC rc = RC::SUCCESS;
   if (children_.empty()) {
+    // 儿子是空的，说明filter 为空；则返回 true
     value.set_boolean(true);
     return rc;
   }
@@ -365,13 +366,18 @@ RC ConjunctionExpr::get_value(const Tuple &tuple, Value &value) const
       LOG_WARN("failed to get value by child expression. rc=%s", strrc(rc));
       return rc;
     }
+    // 每个儿子获取一个 bool 值
     bool bool_value = tmp_value.get_boolean();
+    // true and true -> true;  true and false -> false; false and false -> false;
+    // true or true -> ture;   true or false -> true;  false or false -> false;
     if ((conjunction_type_ == Type::AND && !bool_value) || (conjunction_type_ == Type::OR && bool_value)) {
+      // and 一个false ，则返回false
+      // or 一个 true， 则返回true
       value.set_boolean(bool_value);
       return rc;
     }
   }
-
+  // 都是 and true, 则true； 都是 or false， 则false
   bool default_value = (conjunction_type_ == Type::AND);
   value.set_boolean(default_value);
   return rc;
@@ -386,7 +392,7 @@ ArithmeticExpr::ArithmeticExpr(ArithmeticExpr::Type type, Expression *left, Expr
 ArithmeticExpr::ArithmeticExpr(ArithmeticExpr::Type type, unique_ptr<Expression> left, unique_ptr<Expression> right)
     : arithmetic_type_(type), left_(std::move(left)), right_(std::move(right))
 {}
-
+// 是否相等，类型都是算术运算，left 表达式相等， 和 right 表达式也相等
 bool ArithmeticExpr::equal(const Expression &other) const
 {
   if (this == &other) {
@@ -399,6 +405,7 @@ bool ArithmeticExpr::equal(const Expression &other) const
   return arithmetic_type_ == other_arith_expr.arithmetic_type() && left_->equal(*other_arith_expr.left_) &&
          right_->equal(*other_arith_expr.right_);
 }
+// 左边是整数，右边是整数，算术负号不是除法，则返回值为整数； 其他情况为浮点数
 AttrType ArithmeticExpr::value_type() const
 {
   if (!right_) {
@@ -449,7 +456,7 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
 
   const AttrType target_type = value_type();
   value.set_type(target_type);
-
+  // 加减乘除，负号，操作
   switch (arithmetic_type_) {
     case Type::ADD: {
       Value::add(left_value, right_value, value);
@@ -486,7 +493,10 @@ RC ArithmeticExpr::execute_calc(
   RC rc = RC::SUCCESS;
   switch (type) {
     case Type::ADD: {
+      // 加，目标是 int 类型
       if (attr_type == AttrType::INTS) {
+        // 函数调用，右4个模版类型参数
+        // 左边数据，右边数据，结果数据，结果容量
         binary_operator<LEFT_CONSTANT, RIGHT_CONSTANT, int, AddOperator>(
             (int *)left.data(), (int *)right.data(), (int *)result.data(), result.capacity());
       } else if (attr_type == AttrType::FLOATS) {
@@ -546,7 +556,7 @@ RC ArithmeticExpr::execute_calc(
   }
   return rc;
 }
-
+// 获取左值， 获取右值，计算左右值
 RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const
 {
   RC rc = RC::SUCCESS;
@@ -580,12 +590,13 @@ RC ArithmeticExpr::get_column(Chunk &chunk, Column &column)
   }
   Column left_column;
   Column right_column;
-
+  // 获取左边列
   rc = left_->get_column(chunk, left_column);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get column of left expression. rc=%s", strrc(rc));
     return rc;
   }
+  // 获取右边列
   rc = right_->get_column(chunk, right_column);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get column of right expression. rc=%s", strrc(rc));
@@ -597,21 +608,26 @@ RC ArithmeticExpr::get_column(Chunk &chunk, Column &column)
 RC ArithmeticExpr::calc_column(const Column &left_column, const Column &right_column, Column &column) const
 {
   RC rc = RC::SUCCESS;
-
+  // 返回值类型
   const AttrType target_type = value_type();
+  // 列初始化， 值类型，列的宽度， 列的行数
   column.init(target_type, left_column.attr_len(), std::max(left_column.count(), right_column.count()));
   bool left_const  = left_column.column_type() == Column::Type::CONSTANT_COLUMN;
   bool right_const = right_column.column_type() == Column::Type::CONSTANT_COLUMN;
   if (left_const && right_const) {
+    // 左， 右都是 CONSTANT
     column.set_column_type(Column::Type::CONSTANT_COLUMN);
     rc = execute_calc<true, true>(left_column, right_column, column, arithmetic_type_, target_type);
   } else if (left_const && !right_const) {
+    // 左是 CONSTANT， 右不是
     column.set_column_type(Column::Type::NORMAL_COLUMN);
     rc = execute_calc<true, false>(left_column, right_column, column, arithmetic_type_, target_type);
   } else if (!left_const && right_const) {
+    // 左不是， 右是 CONSTANT
     column.set_column_type(Column::Type::NORMAL_COLUMN);
     rc = execute_calc<false, true>(left_column, right_column, column, arithmetic_type_, target_type);
   } else {
+    // 左不是，右不是
     column.set_column_type(Column::Type::NORMAL_COLUMN);
     rc = execute_calc<false, false>(left_column, right_column, column, arithmetic_type_, target_type);
   }

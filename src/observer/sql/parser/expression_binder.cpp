@@ -535,6 +535,7 @@ RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
   if (expr->type() == ExprType::SUBSELECT) {
     SubqueryExpr *sub_sql =  static_cast<SubqueryExpr *>(expr.get());
     Stmt          *stmt     = nullptr;
+    // 这个接口的的出 stmt 执行的是函数内部 new 的一块动态内存; 需要使用者释放
     rc = Stmt::create_stmt(context_.getDb(), *(sub_sql->get_sub_parser_node()), stmt); // 递归调用，对子查询生成抽象语法树
     if (rc != RC::SUCCESS && rc != RC::UNIMPLEMENTED) {
       LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));

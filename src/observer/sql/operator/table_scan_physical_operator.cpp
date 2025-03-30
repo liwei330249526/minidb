@@ -44,11 +44,12 @@ RC TableScanPhysicalOperator::next()
       LOG_TRACE("record filtered failed=%s", strrc(rc));
       return rc;
     }
-
+    // 过滤通过， break；  也就要break，则必须要获取一个数据并返回
     if (filter_result) {
       sql_debug("get a tuple: %s", tuple_.to_string().c_str());
       break;
     } else {
+      // 过滤不通过，继续扫描下一行数据
       sql_debug("a tuple is filtered: %s", tuple_.to_string().c_str());
     }
   }
@@ -82,11 +83,12 @@ RC TableScanPhysicalOperator::filter(RowTuple &tuple, bool &result)
 
     bool tmp_result = value.get_boolean();
     if (!tmp_result) {
+      // 过滤不通过, 直接返回false
       result = false;
       return rc;
     }
   }
-
+  // 过滤通过, 返回true
   result = true;
   return rc;
 }

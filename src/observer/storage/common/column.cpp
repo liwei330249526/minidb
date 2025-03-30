@@ -51,11 +51,16 @@ void Column::init(const FieldMeta &meta, size_t size)
 void Column::init(AttrType attr_type, int attr_len, size_t capacity)
 {
   reset();
+  // 列的宽度， 列的行数； 数据内存大小
   data_        = new char[capacity * attr_len];
+  // 数据元素行数
   count_       = 0;
+  // 数据元素行数容量
   capacity_    = capacity;
   own_         = true;
+  // 列类型
   attr_type_   = attr_type;
+  // 列宽度
   attr_len_    = attr_len;
   column_type_ = Type::NORMAL_COLUMN;
 }

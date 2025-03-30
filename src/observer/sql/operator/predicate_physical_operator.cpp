@@ -36,8 +36,9 @@ RC PredicatePhysicalOperator::open(Trx *trx)
 RC PredicatePhysicalOperator::next()
 {
   RC                rc   = RC::SUCCESS;
+  // 这里为什么是用 children_[0]
   PhysicalOperator *oper = children_.front().get();
-
+  // 儿子算子 next方法 获取一个 tuple
   while (RC::SUCCESS == (rc = oper->next())) {
     Tuple *tuple = oper->current_tuple();
     if (nullptr == tuple) {
@@ -47,11 +48,12 @@ RC PredicatePhysicalOperator::next()
     }
 
     Value value;
+    // 表达式获取tuple 中的值
     rc = expression_->get_value(*tuple, value); // 物理算子，执行的时候，表达式计算，获取值
     if (rc != RC::SUCCESS) {
       return rc;
     }
-
+    // true 则返回 RC::SUCCESS; 如果是false， 则继续下一个循环，直到找到一个为true 的
     if (value.get_boolean()) {
       return rc;
     }
@@ -64,9 +66,9 @@ RC PredicatePhysicalOperator::close()
   children_[0]->close();
   return RC::SUCCESS;
 }
-
+// 获取儿子算子的tuple
 Tuple *PredicatePhysicalOperator::current_tuple() { return children_[0]->current_tuple(); }
-
+// 获取儿子算子的 schema
 RC PredicatePhysicalOperator::tuple_schema(TupleSchema &schema) const
 {
   return children_[0]->tuple_schema(schema);

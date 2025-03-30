@@ -126,7 +126,7 @@ struct LessEqual
   }
 #endif
 };
-
+// 加法操作
 struct AddOperator
 {
   template <class T>
@@ -323,6 +323,7 @@ void binary_operator(T *left_data, T *right_data, T *result_data, int size)
     result_data[i]    = OP::template operation<T>(left_value, right_value);
   }
 #else
+  // 遍历结果元素个数，获取左边值，获取右边值，op操作结果，加入到结果集合
   for (int i = 0; i < size; i++) {
     auto &left_value  = left_data[LEFT_CONSTANT ? 0 : i];
     auto &right_value = right_data[RIGHT_CONSTANT ? 0 : i];

@@ -122,107 +122,111 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   }
 
   // 根据子查询，构造 join
-  const std::vector<FilterUnit *>    &filter_units = select_stmt->filter_stmt()->filter_units();
-  for (FilterUnit *filter_unit : filter_units) {
+//  const std::vector<FilterUnit *>    &filter_units = select_stmt->filter_stmt()->filter_units();
+//  for (FilterUnit *filter_unit : filter_units) {
     // 子查询
 //    FilterObj &filter_obj_left  = filter_unit->left();
-    FilterObj &filter_obj_left = filter_unit->left();
-    Expression *left = nullptr;
-    FilterObj &filter_obj_right = filter_unit->right();
-    Expression *right = nullptr;
+//    FilterObj &filter_obj_left = filter_unit->left();
+//    Expression *left = nullptr;
+//    FilterObj &filter_obj_right = filter_unit->right();
+//    Expression *right = nullptr;
+//
+//    if (filter_obj_left.is_attr == 0) {
+//      left = new ValueExpr(filter_obj_left.value);
+//    } else if (filter_obj_left.is_attr == 1) {
+//      left = new FieldExpr(filter_obj_left.field);
+//    } else if (filter_obj_left.is_attr == 2) {
+//      left = filter_obj_left.expression.get();
+//    }
+//    else if (filter_obj_left.is_attr == 3) {
+//      left = filter_obj_left.values;
+//      JoinLogicalOperator *join_oper = nullptr;
+//      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+//          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+//        // 半连接
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+//      } else {
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+//      }
+//      // 这里是物理计划
+////      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_left.values));
+//      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_left.values, ReadWriteMode::READ_WRITE));
+//      join_oper->add_child(std::move(table_oper));
+//      join_oper->add_child(std::move(array_operator));
+//      table_oper = unique_ptr<LogicalOperator>(join_oper);
+//    }
 
-    if (filter_obj_left.is_attr == 0) {
-      left = new ValueExpr(filter_obj_left.value);
-    } else if (filter_obj_left.is_attr == 1) {
-      left = new FieldExpr(filter_obj_left.field);
-    } else if (filter_obj_left.is_attr == 2) {
-      left = filter_obj_left.expression.get();
-    } else if (filter_obj_left.is_attr == 3) {
-//      left = filter_obj_left.values.get();
-      JoinLogicalOperator *join_oper = nullptr;
-      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
-          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
-        // 半连接
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
-      } else {
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
-      }
-      // 这里是物理计划
-//      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_left.values));
-      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_left.values, ReadWriteMode::READ_WRITE));
-      join_oper->add_child(std::move(table_oper));
-      join_oper->add_child(std::move(array_operator));
-      table_oper = unique_ptr<LogicalOperator>(join_oper);
-    }
-
-    if (filter_obj_right.is_attr == 0) {
-      right = new ValueExpr(filter_obj_right.value);
-    } else if (filter_obj_right.is_attr == 1) {
-      right = new FieldExpr(filter_obj_right.field);
-    } else if (filter_obj_right.is_attr == 2) {
-      right = filter_obj_right.expression.get();
-    } else if (filter_obj_right.is_attr == 3) {
+//    if (filter_obj_right.is_attr == 0) {
+//      right = new ValueExpr(filter_obj_right.value);
+//    } else if (filter_obj_right.is_attr == 1) {
+//      right = new FieldExpr(filter_obj_right.field);
+//    } else if (filter_obj_right.is_attr == 2) {
+//      right = filter_obj_right.expression.get();
+//    } else if (filter_obj_right.is_attr == 3) {
+//      right = new ValueExpr(filter_obj_right.values.front());
+//    }
 //      right = filter_obj_right.values.get();
-      right = new ValueExpr(filter_obj_right.values.front());
-      JoinLogicalOperator *join_oper = nullptr;
-      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
-          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
-        // 半连接
-        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
-      } else {
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
-      }
-      // 这里是物理计划
-//      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_right.values));
-      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_right.values, ReadWriteMode::READ_WRITE));
-      join_oper->add_child(std::move(table_oper));
-      join_oper->add_child(std::move(array_operator));
-      table_oper = unique_ptr<LogicalOperator>(join_oper);
-    }
+//      right = new ValueExpr(filter_obj_right.values.front());
+//      JoinLogicalOperator *join_oper = nullptr;
+//      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+//          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+//        // 半连接
+//        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
+//      } else {
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+//      }
+//      // 这里是物理计划
+////      unique_ptr<ArrayPhysicalOperator> array_operator = make_unique<ArrayPhysicalOperator>(filter_obj_right.values));
+//      unique_ptr<LogicalOperator> array_operator(new ArrGetLogicalOperator(filter_obj_right.values, ReadWriteMode::READ_WRITE));
+//      join_oper->add_child(std::move(table_oper));
+//      join_oper->add_child(std::move(array_operator));
+//      table_oper = unique_ptr<LogicalOperator>(join_oper);
+//    }
 
-    if (left->type() == ExprType::SUBSELECT) {
-      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(left);
-      unique_ptr<LogicalOperator> sub_oper;
-      create_plan(sub_sql->getExpSelect(), sub_oper);
-      JoinLogicalOperator *join_oper = nullptr;
-      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
-          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
-        // 半连接
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
-      } else {
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
-      }
-
-      join_oper->add_child(std::move(table_oper));
-      join_oper->add_child(std::move(sub_oper));
-      table_oper = unique_ptr<LogicalOperator>(join_oper);
-    } else if (right->type() == ExprType::SUBSELECT) {
-      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right);
-      unique_ptr<LogicalOperator> sub_oper;
-      create_plan(sub_sql->getExpSelect(), sub_oper);
-      JoinLogicalOperator *join_oper = nullptr;
-      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
-          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
-        // 半连接
-        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
-      } else {
-        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
-      }
-
-      join_oper->add_child(std::move(table_oper));
-      join_oper->add_child(std::move(sub_oper));
-      table_oper = unique_ptr<LogicalOperator>(join_oper);
-    }
-  }
+//    if (left->type() == ExprType::SUBSELECT) {
+//      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(left);
+//      unique_ptr<LogicalOperator> sub_oper;
+//      create_plan(sub_sql->getExpSelect(), sub_oper);
+//      JoinLogicalOperator *join_oper = nullptr;
+//      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+//          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+//        // 半连接
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::HashSemiJoin);
+//      } else {
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+//      }
+//
+//      join_oper->add_child(std::move(table_oper));
+//      join_oper->add_child(std::move(sub_oper));
+//      table_oper = unique_ptr<LogicalOperator>(join_oper);
+//    } else if (right->type() == ExprType::SUBSELECT) {
+//      SubqueryExpr *sub_sql = reinterpret_cast<SubqueryExpr *>(right);
+//      unique_ptr<LogicalOperator> sub_oper;
+//      create_plan(sub_sql->getExpSelect(), sub_oper);
+//      JoinLogicalOperator *join_oper = nullptr;
+//      if (filter_unit->comp() == CompOp::IN_OP || filter_unit->comp() == CompOp::NOT_IN_OP ||
+//          filter_unit->comp() == CompOp::EXISTS_OP || filter_unit->comp() == NOT_EXISTS_OP ) {
+//        // 半连接
+//        join_oper = new JoinLogicalOperator(left, LogicalOperatorType::HashSemiJoin);
+//      } else {
+//        join_oper = new JoinLogicalOperator(LogicalOperatorType::JOIN);
+//      }
+//
+//      join_oper->add_child(std::move(table_oper));
+//      join_oper->add_child(std::move(sub_oper));
+//      table_oper = unique_ptr<LogicalOperator>(join_oper);
+//    }
+//  }
   // 创建 predicate 逻辑计划
   unique_ptr<LogicalOperator> predicate_oper;
-
+  // predicate
   RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
   if (OB_FAIL(rc)) {
     LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
     return rc;
   }
-
+  //    last
+  // predicate <- scan
   if (predicate_oper) {
     if (*last_oper) {
       predicate_oper->add_child(std::move(*last_oper));
@@ -238,6 +242,8 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     return rc;
   }
 
+  //    last
+  //   group_by_oper   <-  predicate <- scan
   if (group_by_oper) {
     if (*last_oper) {
       group_by_oper->add_child(std::move(*last_oper));
@@ -246,6 +252,8 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     last_oper = &group_by_oper;
   }
 
+  //
+  // project_oper  <- group_by_oper   <-  predicate <- scan
   auto project_oper = make_unique<ProjectLogicalOperator>(std::move(select_stmt->query_expressions()));
   if (*last_oper) {
     project_oper->add_child(std::move(*last_oper));
@@ -254,8 +262,109 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   logical_operator = std::move(project_oper);
   return RC::SUCCESS;
 }
+// 建立filter
+RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, std::unique_ptr<LogicalOperator> &logical_operator)
+{
+  RC                                  rc = RC::SUCCESS;
+  std::vector<unique_ptr<Expression>> cmp_exprs;
+  const std::vector<FilterUnit *>    &filter_units = filter_stmt->filter_units();
+  for (FilterUnit *filter_unit : filter_units) {
+    FilterObj &filter_obj_left  = filter_unit->left();
+    FilterObj &filter_obj_right = filter_unit->right();
+
+    // 左边是列，或值， 或算数表达式,
+    unique_ptr<Expression> left;
+    if (filter_obj_left.is_attr == 0) {
+      left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+    } else if (filter_obj_left.is_attr == 1) {
+      left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
+    } else if (filter_obj_left.is_attr == 2) {
+      left = std::move(filter_obj_left.expression) ;
+    } else if (filter_obj_left.is_attr == 3) {
+      left = unique_ptr<Expression>(new ValueExpr(Value(1)));
+    }
+
+    unique_ptr<Expression> right;
+    if (filter_obj_right.is_attr == 0) {
+      right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+    } else if (filter_obj_right.is_attr == 1) {
+      right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
+    } else if (filter_obj_right.is_attr == 2) {
+      right = std::move(filter_obj_right.expression);
+    } else if (filter_obj_right.is_attr == 3) {
+      right = unique_ptr<Expression>(new ValueExpr(Value(1)));
+    }
+//    unique_ptr<Expression> left(filter_obj_left.is_attr
+//                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
+//                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+//    // 右边是列，或值， 或算数表达式
+//    unique_ptr<Expression> right(filter_obj_right.is_attr
+//                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
+//                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+    // 如果left 和right 的类型不相等，则满足需要； 即例如 age>10, 即左边是列名，右边是值
+    if (left->value_type() != right->value_type()) {
+      // 计算 left 转换为 right 类型的cost； 和right 转换为 left 类型的cost
+      auto left_to_right_cost = implicit_cast_cost(left->value_type(), right->value_type());
+      auto right_to_left_cost = implicit_cast_cost(right->value_type(), left->value_type());
+      if (left_to_right_cost <= right_to_left_cost && left_to_right_cost != INT32_MAX) {
+        // left 转换为 right 类型
+        ExprType left_type = left->type();
+        // 转换表达式
+        auto cast_expr = make_unique<CastExpr>(std::move(left), right->value_type());
+        if (left_type == ExprType::VALUE) {
+          // 左边是值， 例如 10<age,
+          Value left_val;
+          // 根据转换表达式获取转换后的值
+          if (OB_FAIL(rc = cast_expr->try_get_value(left_val)))
+          {
+            LOG_WARN("failed to get value from left child", strrc(rc));
+            return rc;
+          }
+          // 根据转换后的值构造 ValueExpr
+          left = make_unique<ValueExpr>(left_val); // C++ 引入了右值引用和移动语义，使得可以高效地处理临时对象的资源转移。当使用右值进行赋值操作时，会优先调用移动赋值运算符，避免了不必要的复制操作，提高了性能。
+        } else {
+          // 如果左边是列明，则直接赋值转换表达式
+          left = std::move(cast_expr);  // 。通过 std::move 函数，能够将一个左值转换为右值引用，从而触发 std::unique_ptr 的移动赋值运算符。
+        }
+      } else if (right_to_left_cost < left_to_right_cost && right_to_left_cost != INT32_MAX) {
+        ExprType right_type = right->type();
+        auto cast_expr = make_unique<CastExpr>(std::move(right), left->value_type());
+        if (right_type == ExprType::VALUE) {
+          Value right_val;
+          if (OB_FAIL(rc = cast_expr->try_get_value(right_val)))
+          {
+            LOG_WARN("failed to get value from right child", strrc(rc));
+            return rc;
+          }
+          right = make_unique<ValueExpr>(right_val);
+        } else {
+          right = std::move(cast_expr);
+        }
+
+      } else {
+        rc = RC::UNSUPPORTED;
+        LOG_WARN("unsupported cast from %s to %s", attr_type_to_string(left->value_type()), attr_type_to_string(right->value_type()));
+        return rc;
+      }
+    }
+    // 比较表达式， op, 左边， 右边
+    ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
+    cmp_exprs.emplace_back(cmp_expr);
+  }
+
+  unique_ptr<PredicateLogicalOperator> predicate_oper;
+  if (!cmp_exprs.empty()) {
+    unique_ptr<ConjunctionExpr> conjunction_expr(new ConjunctionExpr(ConjunctionExpr::Type::AND, cmp_exprs));
+    predicate_oper = unique_ptr<PredicateLogicalOperator>(new PredicateLogicalOperator(std::move(conjunction_expr)));
+  }
+
+  logical_operator = std::move(predicate_oper);
+  return rc;
+}
+
+
 // 建立filter 逻辑算子
-RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<LogicalOperator> &logical_operator)
+RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, std::unique_ptr<LogicalOperator> &logical_operator, std::unique_ptr<LogicalOperator> &table_oper, std::unique_ptr<LogicalOperator>* &last_oper)
 {
   RC                                  rc = RC::SUCCESS;
   std::vector<unique_ptr<Expression>> cmp_exprs;
@@ -284,8 +393,9 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 	  } else if (filter_obj_right.is_attr == 2) {
 		  right = std::move(filter_obj_right.expression);
 	  } else if (filter_obj_right.is_attr == 3) {
-      right = unique_ptr<Expression>(new ValueExpr(Value(1)));
+      right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.values.front()));
     }
+
 
 //    unique_ptr<Expression> left(filter_obj_left.is_attr
 //                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
@@ -340,9 +450,9 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
         return rc;
       }
     }
-    // 比较表达式， op, 左边， 右边
-    ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
-    cmp_exprs.emplace_back(cmp_expr);
+
+      ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
+      cmp_exprs.emplace_back(cmp_expr);
   }
 
   unique_ptr<PredicateLogicalOperator> predicate_oper;

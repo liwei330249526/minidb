@@ -95,7 +95,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     default_table = tables[0];
   }
 
-  // 处理join, 将join 的 conditions 加到 select_sql.conditions
+  // 处理join, 将join 的 conditions 加到 select_sql.conditions; filter 条件; join 的filter 直接加到 join 里面
   for (auto &jr : select_sql.join_relations) {
   	for (auto &con : jr.conditions) {
 		  select_sql.conditions.emplace_back(con);

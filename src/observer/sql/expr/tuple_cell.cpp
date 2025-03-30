@@ -16,7 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 
 using namespace std;
-
+// 构造函数，3个额入参，则分别是表名， 字段名，别名
 TupleCellSpec::TupleCellSpec(const char *table_name, const char *field_name, const char *alias)
 {
   if (table_name) {
@@ -35,7 +35,7 @@ TupleCellSpec::TupleCellSpec(const char *table_name, const char *field_name, con
     }
   }
 }
-
+// 构造函数，一个char 入参，则是 alias
 TupleCellSpec::TupleCellSpec(const char *alias)
 {
   if (alias) {

@@ -341,13 +341,15 @@ public:
 public:
   ConjunctionExpr(Type type, std::vector<std::unique_ptr<Expression>> &children);
   virtual ~ConjunctionExpr() = default;
-
+  // 是一个连接
   ExprType type() const override { return ExprType::CONJUNCTION; }
+  // 返回值是 bool
   AttrType value_type() const override { return AttrType::BOOLEANS; }
+  // 获取一个值
   RC       get_value(const Tuple &tuple, Value &value) const override;
-
+  // 是 and 还是 or
   Type conjunction_type() const { return conjunction_type_; }
-
+  // 儿子
   std::vector<std::unique_ptr<Expression>> &children() { return children_; }
 
 private:
@@ -362,6 +364,7 @@ private:
  */
 class ArithmeticExpr : public Expression
 {
+    // 加减乘除， 负号
 public:
   enum class Type
   {
@@ -372,15 +375,18 @@ public:
     NEGATIVE,
   };
 
+
 public:
   ArithmeticExpr(Type type, Expression *left, Expression *right);
   ArithmeticExpr(Type type, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right);
   virtual ~ArithmeticExpr() = default;
-
+  // 两个算术表达式是否相等
   bool     equal(const Expression &other) const override;
+  // 返回， 算术表达式
   ExprType type() const override { return ExprType::ARITHMETIC; }
-
+  // 返回值类型
   AttrType value_type() const override;
+  // 值的长度，右边不为空，则返回右边值的长度， 否则返回 4
   int      value_length() const override
   {
     if (!right_) {
@@ -413,7 +419,7 @@ private:
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
 };
-
+// 未绑定的 agg 表达式
 class UnboundAggregateExpr : public Expression
 {
 public:
@@ -423,10 +429,11 @@ public:
   ExprType type() const override { return ExprType::UNBOUND_AGGREGATION; }
 
   const char *aggregate_name() const { return aggregate_name_.c_str(); }
-
+  // agg 的儿子
   std::unique_ptr<Expression> &child() { return child_; }
-
+  // 返回 INTERNAL
   RC       get_value(const Tuple &tuple, Value &value) const override { return RC::INTERNAL; }
+  // 儿子的值类型
   AttrType value_type() const override { return child_->value_type(); }
 
 private:
@@ -452,25 +459,26 @@ public:
   virtual ~AggregateExpr() = default;
 
   bool equal(const Expression &other) const override;
-
+  // 表达式类型， agg
   ExprType type() const override { return ExprType::AGGREGATION; }
-
+  // 值类型
   AttrType value_type() const override { return child_->value_type(); }
   int      value_length() const override { return child_->value_length(); }
 
   RC get_value(const Tuple &tuple, Value &value) const override;
 
   RC get_column(Chunk &chunk, Column &column) override;
-
+  // agg type， 即是 sum, count, avg, max, min 的哪一个
   Type aggregate_type() const { return aggregate_type_; }
-
+  // 儿子, 成员变量是 非const uniq， 返回是 非const uniq
   std::unique_ptr<Expression> &child() { return child_; }
-
+  // 成员变量是 非 const uniq， 返回是 const uniq
   const std::unique_ptr<Expression> &child() const { return child_; }
-
+  // 创建个算子， sum, count, avg, max, min 的一个
   std::unique_ptr<Aggregator> create_aggregator() const;
 
 public:
+    // 通过string ，获取一个 type, sum, count, avg, max, min 的一个
   static RC type_from_string(const char *type_str, Type &type);
 
 private:
@@ -527,6 +535,13 @@ public:
     std::vector<Value> values;         ///< 要插入的值
 };
 
+// 子查询表达式
+/*
+ *
+ * in, not in, exist, not exist  子查询返回多个值，单列值
+ * =  >  <  >=  <=  <>  子查询返回单个值， 或必须有聚合
+ *
+ * */
 class SubqueryExpr : public Expression {
 public:
     SubqueryExpr(ParsedSqlNode *select_stmt)
@@ -561,10 +576,15 @@ public:
 
     void setFiledName(const string &filedName);
 private:
-    // stmt
+    // stmt，parser 后的子查询信息
     ParsedSqlNode * subSel_;
-    // 子查询的 SELECT 语句
-    SelectStmt *exp_select_;
+    // 子查询的 SELECT 语句 抽象语法树
+    SelectStmt *exp_select_;  // 可以用 stmt 父类指针，也可以用 SelectStmt 指针
+
+    // 用uniq 指针即可
+    // 逻辑算子
+    // 物理算子
+
     AttrType attrType_;
     string table_name_;
     string filed_name_;

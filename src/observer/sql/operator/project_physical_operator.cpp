@@ -39,7 +39,7 @@ RC ProjectPhysicalOperator::open(Trx *trx)
 
   return RC::SUCCESS;
 }
-
+// 调儿子的next
 RC ProjectPhysicalOperator::next()
 {
   if (children_.empty()) {
@@ -61,7 +61,7 @@ Tuple *ProjectPhysicalOperator::current_tuple()
   tuple_.set_tuple(children_[0]->current_tuple());
   return &tuple_;
 }
-
+// 获取每个 expression， 设置其名字
 RC ProjectPhysicalOperator::tuple_schema(TupleSchema &schema) const
 {
   for (const unique_ptr<Expression> &expression : expressions_) {
