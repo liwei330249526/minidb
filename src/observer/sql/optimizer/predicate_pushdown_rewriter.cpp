@@ -127,8 +127,8 @@ RC PredicatePushdownRewriter::get_exprs_can_pushdown(
     if (left_expr->type() != ExprType::FIELD && right_expr->type() != ExprType::FIELD) {
       return rc;
     }
-    if (left_expr->type() != ExprType::FIELD && left_expr->type() != ExprType::VALUE &&
-        right_expr->type() != ExprType::FIELD && right_expr->type() != ExprType::VALUE) {
+    if ((left_expr->type() != ExprType::FIELD && left_expr->type() != ExprType::VALUE) ||    // 只要有一边不是 filed 或 value， 就不下推
+        (right_expr->type() != ExprType::FIELD && right_expr->type() != ExprType::VALUE)) {
       return rc;
     }
 
