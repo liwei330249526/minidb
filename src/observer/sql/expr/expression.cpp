@@ -390,7 +390,7 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
         // NOT IN OP
         value.set_boolean(true);
       }
-      return rc;
+      return RC::SUCCESS;  // 这里返回成功，即； leftval  ---- rightsubquery[list] , right 匹配结束，没有找到匹配，则设置为false；但返回成功。继续left.next 匹配下一行
 
     } else {
       // subquery 只能有一行
