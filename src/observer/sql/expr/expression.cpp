@@ -417,6 +417,98 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
       }
       return rc;
     }
+  } else if (right_->type() == ExprType::VALUE_LIST) {
+    // valusrt list
+    if (comp_ == IN_OP || comp_ == NOT_IN_OP || comp_ == EXISTS_OP || comp_ == NOT_EXISTS_OP) {
+      // subquery 可以有多行
+      // 扫描，直到一个成功，返回true； 否则，返回 false
+      RC rc = left_->get_value(tuple, left_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+      while ((rc = right_->get_value(tuple, right_value)) == RC::SUCCESS) {
+        // 如果成功，则已知获取数据
+        // 成功获取数据
+        if (comp_ == EXISTS_OP) {
+          // 结束了，没有发现，则false
+          // 有一个，则true
+          value.set_boolean(true);
+          return rc;
+        } else if (comp_ == NOT_EXISTS_OP) {
+          // 结束了，没有发现则true
+          // 有一个，则false
+          value.set_boolean(false);
+          return rc;
+        } else if (comp_ == IN_OP){
+          // 比较计算
+          rc = compare_value(left_value, right_value, bool_value);
+          if (rc != RC::SUCCESS) {
+            return rc;
+          }
+          // 扫描到一个成功的; 即返回true; 结束后为匹配则返回 false 子查询可能要扫描多次; 所以 EOF 后要重新打开
+          // 3   [1,2,3,4,5], 扫描到3 的时候，返回true；    3.5， 扫描到尾部，返回false；
+          if (bool_value) {
+            value.set_boolean(true);
+            return rc;
+          }
+        } else {
+          // NOT IN OP
+          // 比较计算
+          rc = compare_value(left_value, right_value, bool_value);
+          if (rc != RC::SUCCESS) {
+            return rc;
+          }
+          // 扫描到一个成功的; 即返回true;  子查询可能要扫描多次; 所以 EOF 后要重新打开
+          // 不在集合中；
+          // 3   [1,2,3,4,5], 扫描到3 的时候，返回 false；    3.5， 扫描到尾部，返回 true；
+          if (bool_value) {  // 返回ture, 是不等, 所有都不等，才会true;   返回 false， 是相等, 有一个相等, 即符合 not in false；
+            value.set_boolean(false);
+            return rc;
+          }
+        }
+      }
+      if (rc != RC::RECORD_EOF) {
+        return rc;
+      }
+
+      // 扫描结束了，还没有一个成功的，则失败
+      if(comp_ == EXISTS_OP) {
+        value.set_boolean(false);
+      } else if (comp_ == NOT_EXISTS_OP) {
+        value.set_boolean(true);
+      } else if (comp_ == IN_OP) {
+        value.set_boolean(false);
+      } else {
+        // NOT IN OP
+        value.set_boolean(true);
+      }
+      return RC::SUCCESS;  // 这里返回成功，即； leftval  ---- rightsubquery[list] , right 匹配结束，没有找到匹配，则设置为false；但返回成功。继续left.next 匹配下一行
+
+    } else {
+      // subquery 只能有一行
+      Value tem;
+      RC rc = right_->get_value(tuple, right_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+      rc = right_->get_value(tuple, tem);
+      if (rc != RC::RECORD_EOF) {
+        LOG_DEBUG("left is subquery , right is subquery, left return above 1 row");
+        return RC::INTERNAL;
+      }
+
+      rc = left_->get_value(tuple, left_value);
+      if (rc != RC::SUCCESS) {
+        return rc;
+      }
+
+      // 比较计算
+      rc = compare_value(left_value, right_value, bool_value);
+      if (rc == RC::SUCCESS) {
+        value.set_boolean(bool_value);
+      }
+      return rc;
+    }
   } else {
     // 3 left, right 都不是子查询
     // 原有逻辑
@@ -1158,3 +1250,48 @@ SubqueryExpr::~SubqueryExpr() {
   }
 }
 
+
+RC ValueListExpr::open_val_list() const {
+  RC rc = RC::SUCCESS;
+  cur_id_ = 0;
+  is_open_ = true;
+  return rc;
+}
+
+RC ValueListExpr::close_val_list() const {
+  RC rc = RC::SUCCESS;
+  is_open_ = false;
+  cur_id_ = 0;
+  return rc;
+}
+
+RC ValueListExpr::get_value(const Tuple &tuple, Value &value) const {
+  RC rc = RC::SUCCESS;
+  // 如果没有打开，则打开
+  if(!isOpen()) {
+    rc = open_val_list();
+    if (rc != RC::SUCCESS) {
+      return rc;
+    }
+  }
+  // 如果到了最大值，则关闭，返回 eof
+  if (cur_id_ == values_.size()) {
+    close_val_list();
+    return RC::RECORD_EOF;
+  }
+  // 返回当前id 值
+  value = values_.at(cur_id_);
+  cur_id_++;
+  return rc;
+}
+
+AttrType ValueListExpr::value_type() const {
+  if (values_.size() != 0) {
+    return values_.front().attr_type();
+  }
+  return AttrType::UNDEFINED;
+}
+
+bool ValueListExpr::isOpen() const {
+  return is_open_;
+}

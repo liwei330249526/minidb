@@ -101,6 +101,9 @@ RC ExpressionBinder::bind_expression(unique_ptr<Expression> &expr, vector<unique
     case ExprType::SUBSELECT: {
       return bind_sub_select_expression(expr, bound_expressions);
     } break;
+    case ExprType::VALUE_LIST: {
+      return bind_value_list_expression(expr, bound_expressions);
+    } break;
 
 
     default: {
@@ -551,4 +554,20 @@ RC ExpressionBinder::bind_sub_select_expression(unique_ptr<Expression> &expr,
   }
 
   return RC::SUCCESS;
+}
+
+RC ExpressionBinder::bind_value_list_expression(unique_ptr<Expression> &expr,
+                                                vector<std::unique_ptr<Expression>> &bound_expressions) {
+  RC rc = RC::SUCCESS;
+  if (nullptr == expr) {
+    return RC::SUCCESS;
+  }
+
+  // 如果是子查询, 则递归create stmt
+  if (expr->type() == ExprType::VALUE_LIST) {
+    // 入参的 epxr 给了出参的 bound_expressions
+    bound_expressions.emplace_back(std::move(expr));
+  }
+
+  return rc;
 }

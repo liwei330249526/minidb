@@ -145,7 +145,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<std::unique_ptr<Expression>> * expression_list;
   JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
   std::vector<JoinRelationNode> *            join_node_list; // join 链表
-  // std::vector<Value> *                       value_list;
+  std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;
@@ -175,7 +175,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
-// %type <value_list>          value_list
+%type <value_list>          value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <string>              storage_format
@@ -190,7 +190,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
 %type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
 %type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
-// %type <valuelist_expr>      valuelist_expr_y // valueslists
+%type <valuelist_expr>      valuelist_expr_y // valueslists
 
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
@@ -434,26 +434,26 @@ insert_stmt:        /*insert   语句的语法解析树*/
     }
     ;
 
-//  value_list:
-//      /* empty */
-//      {
-//        $$ = nullptr;
-//      }
-//      | value {
-//        $$ = new std::vector<Value>;
-//        $$->emplace_back(*$1);
-//        delete $1;
-//      }
-//      | value COMMA value_list  {
-//        if ($3 != nullptr) {
-//          $$ = $3;
-//        } else {
-//          $$ = new std::vector<Value>;
-//        }
-//        $$->emplace_back(*$1);
-//        delete $1;
-//      }
-//      ;
+value_list:
+  /* empty */
+  {
+    $$ = nullptr;
+  }
+  | value {
+    $$ = new std::vector<Value>;
+    $$->emplace_back(*$1);
+    delete $1;
+  }
+  | value COMMA value_list  {
+    if ($3 != nullptr) {
+      $$ = $3;
+    } else {
+      $$ = new std::vector<Value>;
+    }
+    $$->emplace_back(*$1);
+    delete $1;
+  }
+  ;
 value:
     NUMBER {
       $$ = new Value((int)$1);
@@ -606,13 +606,14 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
    }
     ;
-// valuelist_expr_y:
-//     LBRACE value_list RBRACE
-//     {
-//         $$ = new ValueListExpr();
-//         $$->values.swap(*$2);
-//     }
-//     ;
+ valuelist_expr_y:   // value list 表达式在 y文件
+     LBRACE value_list RBRACE
+     {
+         $$ = new ValueListExpr();
+         $$->values_.swap(*$2);
+         std::reverse($$->values_.begin(), $$->values_.end());
+     }
+     ;
 
 subquery:
     LBRACE select_stmt RBRACE
@@ -836,14 +837,6 @@ condition_list:
     }
     ;
 condition:
-//    expression comp_op LBRACE value_list RBRACE {  // value list , 小的构造大的.
-//      $$ = new ConditionSqlNode;
-//      $$->left_is_attr = 2;    // 左边是表达式
-//      $$->left_expression = $1;
-//      $$->right_is_attr = 3;   // 右边是值列表
-//      $$->right_values.swap(*$4);
-//      $$->comp = $2;
-//    }
     expression comp_op subquery    // 将 subquery 从 expression 拿出来
     {
       $$ = new ConditionSqlNode;
@@ -871,6 +864,14 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
+     | expression comp_op valuelist_expr_y {
+       $$ = new ConditionSqlNode;
+       $$->left_is_attr = 2;    // 左边是表达式
+       $$->left_expression = $1;
+       $$->right_is_attr = 2;
+       $$->right_expression = $3; // 右边是值列表
+       $$->comp = $2;
+     }
      | expression comp_op expression
     {
       $$ = new ConditionSqlNode;

@@ -147,7 +147,7 @@ union YYSTYPE
   std::vector<std::unique_ptr<Expression>> * expression_list;
   JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
   std::vector<JoinRelationNode> *            join_node_list; // join 链表
-  // std::vector<Value> *                       value_list;
+  std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;

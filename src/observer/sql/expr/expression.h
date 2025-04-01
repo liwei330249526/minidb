@@ -47,7 +47,7 @@ enum class ExprType
 
   FIELD,        ///< 字段。在实际执行时，根据行数据内容提取对应字段的值
   VALUE,        ///< 常量值
-  VALUE_LIST,        ///< 常量值
+  VALUE_LIST,        ///< 常量值列表
   CAST,         ///< 需要做类型转换的表达式
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
@@ -600,8 +600,19 @@ private:
 
 // 值列表表达式
 class ValueListExpr : public Expression {
-    ValueListExpr() = default;
 public:
+    ValueListExpr() = default;
+    virtual ~ValueListExpr() = default;
+    RC open_val_list() const;
+    RC close_val_list() const;
+    bool isOpen() const;
+
     ExprType type() const override { return ExprType::VALUE_LIST; }
-    std::vector<Value> values;         ///< 要插入的值
+    RC get_value(const Tuple &tuple, Value &value) const override;
+    AttrType value_type() const override;
+
+    mutable bool is_open_;
+    Trx *trx_;
+    std::vector<Value> values_;         ///< 要插入的值
+    mutable int32_t cur_id_;
 };
