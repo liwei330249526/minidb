@@ -1025,6 +1025,7 @@ RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
 //      break;
 //    }
   // 子查询获取值， 即从物理计划中获取值
+  // 如果没有打开，则打开，如果失败，直接返回
   if(!isOpen()) {
     rc = open_sub_query();
     if (rc != RC::SUCCESS) {
@@ -1034,6 +1035,7 @@ RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
 
 //  const unique_ptr<PhysicalOperator> &sub_query_physical_plan = getSubQueryPhysicalPlan();
   rc = sub_query_physical_plan_->next();
+  // 如果不成功，则返回 rc
   if (rc != RC::SUCCESS) {
     if (rc == RC::RECORD_EOF) {
       RC rct = close_sub_query(); // 未打开状态
@@ -1047,12 +1049,20 @@ RC SubqueryExpr::get_value(const Tuple &tuple, Value &value) const {
   Tuple *sub_tuple = sub_query_physical_plan_->current_tuple();
   if (nullptr == sub_tuple) {
     rc = RC::INTERNAL;
+    RC rct = close_sub_query(); // 未打开状态
+    if (rct != RC::SUCCESS) {
+      return rct;
+    }
     LOG_WARN("failed to get tuple from operator");
     return rc;
   }
 
   if (sub_tuple->cell_num() > 1) {
     rc = RC::INTERNAL;
+    RC rct = close_sub_query(); // 未打开状态
+    if (rct != RC::SUCCESS) {
+      return rct;
+    }
     LOG_WARN("subquery cell must do not above 1");
     return rc;
   }
@@ -1140,5 +1150,11 @@ RC SubqueryExpr::close_sub_query() const {
     is_open_ = false;
   }
   return rc;
+}
+// 没有帮我们 close subquery 的物理计划；只有在析构的时候，判断物理计划是否打开，如果打开，则关闭物理计划
+SubqueryExpr::~SubqueryExpr() {
+  if (is_open_) {
+    close_sub_query();
+  }
 }
 

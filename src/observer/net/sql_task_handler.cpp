@@ -44,10 +44,11 @@ RC SqlTaskHandler::handle_event(Communicator *communicator)
 
   rc = communicator->write_result(event, need_disconnect);
   LOG_INFO("write result return %s", strrc(rc));
-  event->session()->set_current_request(nullptr);
-  Session::set_current_session(nullptr);
+//  event->session()->set_current_request(nullptr);  // 设置为空了
+//  Session::set_current_session(nullptr);
 
   delete event;
+  Session::set_current_session(nullptr);
 
   if (need_disconnect) {
     return RC::INTERNAL;

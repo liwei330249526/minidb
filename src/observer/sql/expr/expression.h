@@ -544,7 +544,8 @@ public:
 //            : subSel_(select_stmt) {}
 // 当用于析构函数时，virtual 关键字的作用是保证在通过基类指针或引用删除派生类对象时，能正确调用派生类的析构函数。要是基类的析构函数不是虚函数，那么在使用基类指针删除派生类对象时，只会调用基类的析构函数，派生类的析构函数不会被调用，这可能会造成资源泄漏。
 // 对于析构函数使用 = default;，意味着使用编译器自动生成的析构函数，该析构函数会自动调用基类的析构函数和成员对象的析构函数。如果类没有特殊的资源管理需求，使用 = default; 可以简化代码
-    virtual ~SubqueryExpr() = default;
+    virtual ~SubqueryExpr();
+
 
     ExprType type() const override { return ExprType::SUBSELECT; }
     RC get_value(const Tuple &tuple, Value &value) const override;

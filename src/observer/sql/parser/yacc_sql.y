@@ -145,7 +145,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<std::unique_ptr<Expression>> * expression_list;
   JoinRelationNode*                          join_node;  // %union 定义了所有可能的语义值类型。
   std::vector<JoinRelationNode> *            join_node_list; // join 链表
-  std::vector<Value> *                       value_list;
+  // std::vector<Value> *                       value_list;
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;
@@ -171,11 +171,11 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <number>              number
 %type <string>              relation
 %type <comp>                comp_op
-%type <comp>                sub_query_comp_op
+// %type <comp>                sub_query_comp_op
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
-%type <value_list>          value_list
+// %type <value_list>          value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <string>              storage_format
@@ -434,26 +434,26 @@ insert_stmt:        /*insert   语句的语法解析树*/
     }
     ;
 
-  value_list:
-      /* empty */
-      {
-        $$ = nullptr;
-      }
-      | value {
-        $$ = new std::vector<Value>;
-        $$->emplace_back(*$1);
-        delete $1;
-      }
-      | value COMMA value_list  {
-        if ($3 != nullptr) {
-          $$ = $3;
-        } else {
-          $$ = new std::vector<Value>;
-        }
-        $$->emplace_back(*$1);
-        delete $1;
-      }
-      ;
+//  value_list:
+//      /* empty */
+//      {
+//        $$ = nullptr;
+//      }
+//      | value {
+//        $$ = new std::vector<Value>;
+//        $$->emplace_back(*$1);
+//        delete $1;
+//      }
+//      | value COMMA value_list  {
+//        if ($3 != nullptr) {
+//          $$ = $3;
+//        } else {
+//          $$ = new std::vector<Value>;
+//        }
+//        $$->emplace_back(*$1);
+//        delete $1;
+//      }
+//      ;
 value:
     NUMBER {
       $$ = new Value((int)$1);
@@ -836,15 +836,15 @@ condition_list:
     }
     ;
 condition:
-    expression sub_query_comp_op LBRACE value_list RBRACE {  // value list , 小的构造大的.
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 2;    // 左边是表达式
-      $$->left_expression = $1;
-      $$->right_is_attr = 3;   // 右边是值列表
-      $$->right_values.swap(*$4);
-      $$->comp = $2;
-    }
-     | expression sub_query_comp_op subquery    // 将 subquery 从 expression 拿出来
+//    expression comp_op LBRACE value_list RBRACE {  // value list , 小的构造大的.
+//      $$ = new ConditionSqlNode;
+//      $$->left_is_attr = 2;    // 左边是表达式
+//      $$->left_expression = $1;
+//      $$->right_is_attr = 3;   // 右边是值列表
+//      $$->right_values.swap(*$4);
+//      $$->comp = $2;
+//    }
+    expression comp_op subquery    // 将 subquery 从 expression 拿出来
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 2;    // 左边是表达式
@@ -853,7 +853,7 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
-     | subquery sub_query_comp_op expression
+     | subquery comp_op expression
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 2;    // 左边是表达式
@@ -862,7 +862,15 @@ condition:
       $$->right_expression = $3;
       $$->comp = $2;
     }
-
+     | subquery comp_op subquery
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 2;    // 左边是表达式
+      $$->left_expression = $1;
+      $$->right_is_attr = 2;   // 右边是表达式
+      $$->right_expression = $3;
+      $$->comp = $2;
+    }
      | expression comp_op expression
     {
       $$ = new ConditionSqlNode;
@@ -883,13 +891,13 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP; }
     | NOT LIKE { $$ = NOT_LIKE_OP; }
-//    | IN { $$ = IN_OP; }
-//    | NOT IN { $$ = NOT_IN_OP; }
-    ;
-sub_query_comp_op:                 // perfact, 这里规避了， warning: 1 reduce/reduce conflict [-Wconflicts-rr]  错误
-      IN { $$ = IN_OP; }
+    | IN { $$ = IN_OP; }
     | NOT IN { $$ = NOT_IN_OP; }
     ;
+// sub_query_comp_op:                 // perfact, 这里规避了， warning: 1 reduce/reduce conflict [-Wconflicts-rr]  错误
+//       IN { $$ = IN_OP; }
+//     | NOT IN { $$ = NOT_IN_OP; }
+//     ;
 
 // your code here
 group_by:

@@ -189,17 +189,17 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   if (RC::SUCCESS != sql_result->return_code() || !sql_result->has_operator()) {
     return write_state(event, need_disconnect);
   }
-  // 这里进去执行delete
+  // 这里进去执行delete, 打开
   rc = sql_result->open();
   if (OB_FAIL(rc)) {
     sql_result->close();
     sql_result->set_return_code(rc);
     return write_state(event, need_disconnect);
   }
-
+  // schema, 即，结果集，多个列
   const TupleSchema &schema   = sql_result->tuple_schema();
   const int          cell_num = schema.cell_num();
-
+  // 头
   for (int i = 0; i < cell_num; i++) {
     const TupleCellSpec &spec  = schema.cell_at(i);
     const char          *alias = spec.alias();
@@ -226,7 +226,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   }
 
   if (cell_num > 0) {
-    char newline = '\n';
+    char newline = '\n'; // 换行，写数据
 
     rc = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
@@ -242,6 +242,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       && event->session()->used_chunk_mode()) {
     rc = write_chunk_result(sql_result);
   } else {
+    // 内容
     rc = write_tuple_result(sql_result);
   }
 
@@ -262,7 +263,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   } else {
     need_disconnect = false;
   }
-
+  // 关闭
   RC rc_close = sql_result->close();
   if (OB_SUCC(rc)) {
     rc = rc_close;
@@ -275,12 +276,14 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
 {
   RC rc = RC::SUCCESS;
   Tuple *tuple = nullptr;
+  // 获取数据，select 的一行数据
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {  // 可以是 ExpressionTuple
     assert(tuple != nullptr);
-
+    // 有几个列
     int cell_num = tuple->cell_num();
     for (int i = 0; i < cell_num; i++) {
       if (i != 0) {
+        // 分隔符
         const char *delim = " | ";
 
         rc = writer_->writen(delim, strlen(delim));
@@ -300,7 +303,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
       }
       // 读取的每个值，str
       string cell_str = value.to_string();
-
+      // 写每个列的数据
       rc = writer_->writen(cell_str.data(), cell_str.size());
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to send data to client. err=%s", strerror(errno));
@@ -308,7 +311,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
         return rc;
       }
     }
-
+    // 写换行符
     char newline = '\n';
 
     rc = writer_->writen(&newline, 1);
@@ -318,7 +321,7 @@ RC PlainCommunicator::write_tuple_result(SqlResult *sql_result)
       return rc;
     }
   }
-
+  // 这里，等于 EOF ，则是一个成功
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;
   }
