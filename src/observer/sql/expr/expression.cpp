@@ -329,7 +329,8 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
 
     if (comp_ == IN_OP || comp_ == NOT_IN_OP || comp_ == EXISTS_OP || comp_ == NOT_EXISTS_OP) {
       // subquery 可以有多行
-      // 扫描，直到一个成功，返回true； 否则，返回 false
+      // 扫描，直到一个成功，返回true； 否则，返回 false;
+      // 返回 ERROR, 外部会close； 返回sucess， 需要这里自己close
       RC rc = other->get_value(tuple, *other_value);
       if (rc != RC::SUCCESS) {
         return rc;
@@ -341,12 +342,14 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 结束了，没有发现，则false
           // 有一个，则true
           value.set_boolean(true);
-          return rc;
+          break;
+//          return rc;
         } else if (comp_ == NOT_EXISTS_OP) {
           // 结束了，没有发现则true
           // 有一个，则false
           value.set_boolean(false);
-          return rc;
+          break;
+//          return rc;
         } else if (comp_ == IN_OP){
           // 比较计算
           rc = compare_value(left_value, right_value, bool_value);
@@ -357,7 +360,8 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 3   [1,2,3,4,5], 扫描到3 的时候，返回true；    3.5， 扫描到尾部，返回false；
           if (bool_value) {
             value.set_boolean(true);
-            return rc;
+            break;
+//            return rc;
           }
         } else {
           // NOT IN OP
@@ -371,15 +375,27 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 3   [1,2,3,4,5], 扫描到3 的时候，返回 false；    3.5， 扫描到尾部，返回 true；
           if (bool_value) {  // 返回ture, 是不等, 所有都不等，才会true;   返回 false， 是相等, 有一个相等, 即符合 not in false；
             value.set_boolean(false);
-            return rc;
+            break;
+//            return rc;
           }
         }
       }
-      if (rc != RC::RECORD_EOF) {
+      // 其他类型的失败，直接返回接口
+      if (rc != RC::RECORD_EOF && rc != RC::SUCCESS) {
         return rc;
       }
 
-      // 扫描结束了，还没有一个成功的，则失败
+      // 对left， 已经有判断结果了
+      if (rc != RC::RECORD_EOF) {
+        // 返回成功前，需要close 子查询
+        RC rc_close = static_cast<SubqueryExpr*>(sub_query)->close_sub_query(); // 未打开状态
+        if (rc_close != RC::SUCCESS) {
+          return rc_close;
+        }
+        return rc;
+      }
+
+      // 扫描结束了，还没有一个匹配成功的，则失败
       if(comp_ == EXISTS_OP) {
         value.set_boolean(false);
       } else if (comp_ == NOT_EXISTS_OP) {
@@ -390,6 +406,7 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
         // NOT IN OP
         value.set_boolean(true);
       }
+
       return RC::SUCCESS;  // 这里返回成功，即； leftval  ---- rightsubquery[list] , right 匹配结束，没有找到匹配，则设置为false；但返回成功。继续left.next 匹配下一行
 
     } else {
@@ -433,12 +450,14 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 结束了，没有发现，则false
           // 有一个，则true
           value.set_boolean(true);
-          return rc;
+          break;
+//          return rc;
         } else if (comp_ == NOT_EXISTS_OP) {
           // 结束了，没有发现则true
           // 有一个，则false
           value.set_boolean(false);
-          return rc;
+          break;
+//          return rc;
         } else if (comp_ == IN_OP){
           // 比较计算
           rc = compare_value(left_value, right_value, bool_value);
@@ -449,7 +468,8 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 3   [1,2,3,4,5], 扫描到3 的时候，返回true；    3.5， 扫描到尾部，返回false；
           if (bool_value) {
             value.set_boolean(true);
-            return rc;
+            break;
+//            return rc;
           }
         } else {
           // NOT IN OP
@@ -463,11 +483,23 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
           // 3   [1,2,3,4,5], 扫描到3 的时候，返回 false；    3.5， 扫描到尾部，返回 true；
           if (bool_value) {  // 返回ture, 是不等, 所有都不等，才会true;   返回 false， 是相等, 有一个相等, 即符合 not in false；
             value.set_boolean(false);
-            return rc;
+            break;
+//            return rc;
           }
         }
       }
+      // 其他类型的失败，直接返回接口
+      if (rc != RC::RECORD_EOF && rc != RC::SUCCESS) {
+        return rc;
+      }
+
+      // 对left， 已经有判断结果了
       if (rc != RC::RECORD_EOF) {
+        // 返回成功前，需要close 子查询
+        RC rc_close = static_cast<ValueListExpr*>(right_.get())->close_val_list(); // 未打开状态
+        if (rc_close != RC::SUCCESS) {
+          return rc_close;
+        }
         return rc;
       }
 
@@ -482,6 +514,7 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
         // NOT IN OP
         value.set_boolean(true);
       }
+      // 返回成功前，需要close 子查询
       return RC::SUCCESS;  // 这里返回成功，即； leftval  ---- rightsubquery[list] , right 匹配结束，没有找到匹配，则设置为false；但返回成功。继续left.next 匹配下一行
 
     } else {
