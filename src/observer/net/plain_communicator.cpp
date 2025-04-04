@@ -174,6 +174,11 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
       return rc;
     }
   }
+  if (rc != RC::SUCCESS) {
+    SqlResult *sql_result = event->sql_result();
+    sql_result->set_return_code(rc);
+    write_state(event, need_disconnect);
+  }
   writer_->flush();  // TODO handle error
   return rc;
 }
@@ -185,7 +190,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   need_disconnect = true;
 
   SqlResult *sql_result = event->sql_result();
-
+  // 如果失败了，则返回错误
   if (RC::SUCCESS != sql_result->return_code() || !sql_result->has_operator()) {
     return write_state(event, need_disconnect);
   }
