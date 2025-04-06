@@ -156,6 +156,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
   ValueListExpr *                            valuelist_expr;  // 新增
+  std::vector<std::string>*                  string_list;
 }
 
 %token <number> NUMBER    // 整数
@@ -211,6 +212,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <sql_node>            help_stmt
 %type <sql_node>            exit_stmt
 %type <sql_node>            command_wrapper
+%type <string_list>         id_list_y
 // commands should be a list but I use a single command instead
 %type <sql_node>            commands
 
@@ -306,16 +308,21 @@ desc_table_stmt:
     ;
 
 create_index_stmt:    /*create index 语句的语法解析树*/
-    CREATE INDEX ID ON ID LBRACE ID RBRACE
+    CREATE INDEX ID ON ID LBRACE id_list_y RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
       CreateIndexSqlNode &create_index = $$->create_index;
       create_index.index_name = $3;
       create_index.relation_name = $5;
-      create_index.attribute_name = $7;
+      if ($7 != nullptr) {
+        // 因为是从右往左解析的，所以需要反转
+        create_index.attribute_name.swap(*$7);
+        std::reverse(create_index.attribute_name.begin(), create_index.attribute_name.end());
+        delete $7;
+      }
+
       free($3);
       free($5);
-      free($7);
     }
     ;
 
@@ -785,6 +792,25 @@ rel_attr:
       $$->attribute_name = $3;
       free($1);
       free($3);
+    }
+    ;
+
+id_list_y:  // id 列表
+    ID
+    {
+      $$ = new std::vector<std::string>;
+      $$->emplace_back($1);
+      free($1);
+    }
+    | ID COMMA id_list_y
+    {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<std::string>;
+      }
+      $$->emplace_back($1);
+      free($1);
     }
     ;
 

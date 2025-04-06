@@ -158,8 +158,9 @@ union YYSTYPE
   std::vector<float> *                       vector_value;  // 新增：用于存储向量数据
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
   ValueListExpr *                            valuelist_expr;  // 新增
+  std::vector<std::string>*                  string_list;
 
-#line 163 "yacc_sql.hpp"
+#line 164 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

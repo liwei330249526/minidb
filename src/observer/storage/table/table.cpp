@@ -480,7 +480,7 @@ RC Table::create_index(Trx *trx, const FieldMeta *field_meta, const char *index_
 
   // 覆盖原始元数据文件
   string meta_file = table_meta_file(base_dir_.c_str(), name());
-
+  // 临时文件，覆盖元数据文件
   int ret = rename(tmp_file.c_str(), meta_file.c_str());
   if (ret != 0) {
     LOG_ERROR("Failed to rename tmp meta file (%s) to normal meta file (%s) while creating index (%s) on table (%s). "
@@ -488,7 +488,7 @@ RC Table::create_index(Trx *trx, const FieldMeta *field_meta, const char *index_
               tmp_file.c_str(), meta_file.c_str(), index_name, name(), errno, strerror(errno));
     return RC::IOERR_WRITE;
   }
-
+  // 交换内存数据
   table_meta_.swap(new_table_meta);
 
   LOG_INFO("Successfully added a new index (%s) on the table (%s)", index_name, name());
