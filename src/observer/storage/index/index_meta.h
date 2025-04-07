@@ -35,7 +35,8 @@ class IndexMeta
 public:
   IndexMeta() = default;
 
-  RC init(const char *name, const FieldMeta &field);
+  RC init(const char *name, vector<FieldMeta*> &field_metas);
+  RC init(const char *name, vector<FieldMeta> &field_metas);
 
 public:
   const char *name() const;
@@ -48,6 +49,7 @@ public:
   static RC from_json(const TableMeta &table, const Json::Value &json_value, IndexMeta &index);
 
 protected:
-  string name_;   // index's name
-  string field_;  // field's name
+  string name_;   // index's name   索引名字
+  vector<FieldMeta> field_metas_;  // 可以是多个列的名字， 这里不能是指针，需要时数据
+  vector<string> field_;  // field's name   可以是多个列的名字
 };

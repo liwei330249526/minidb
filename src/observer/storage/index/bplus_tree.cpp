@@ -31,15 +31,23 @@ using namespace common;
  */
 #define FIRST_INDEX_PAGE 1
 
-int calc_internal_page_capacity(int attr_length)
+int calc_internal_page_capacity(vector<int> &attr_lengths)
 {
+  int attr_length = 0;
+  for (int i = 0; i < attr_lengths.size(); i++) {
+    attr_length += attr_lengths[i];
+  }
   int item_size = attr_length + sizeof(RID) + sizeof(PageNum);
   int capacity  = ((int)BP_PAGE_DATA_SIZE - InternalIndexNode::HEADER_SIZE) / item_size;
   return capacity;
 }
 
-int calc_leaf_page_capacity(int attr_length)
+int calc_leaf_page_capacity(vector<int> &attr_lengths)
 {
+  int attr_length = 0;
+  for (int i = 0; i < attr_lengths.size(); i++) {
+    attr_length += attr_lengths[i];
+  }
   int item_size = attr_length + sizeof(RID) + sizeof(RID);
   int capacity  = ((int)BP_PAGE_DATA_SIZE - LeafIndexNode::HEADER_SIZE) / item_size;
   return capacity;
@@ -797,8 +805,8 @@ RC BplusTreeHandler::sync()
 RC BplusTreeHandler::create(LogHandler &log_handler,
                             BufferPoolManager &bpm,
                             const char *file_name, 
-                            AttrType attr_type, 
-                            int attr_length, 
+                            vector<AttrType> attr_types,
+                            vector<int> attr_lengths,
                             int internal_max_size /* = -1*/,
                             int leaf_max_size /* = -1 */)
 {
@@ -818,7 +826,7 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
   }
   LOG_INFO("Successfully open index file %s.", file_name);
 
-  rc = this->create(log_handler, *bp, attr_type, attr_length, internal_max_size, leaf_max_size);
+  rc = this->create(log_handler, *bp, attr_types, attr_lengths, internal_max_size, leaf_max_size);
   if (OB_FAIL(rc)) {
     bpm.close_file(file_name);
     return rc;
@@ -830,16 +838,16 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
 
 RC BplusTreeHandler::create(LogHandler &log_handler,
             DiskBufferPool &buffer_pool,
-            AttrType attr_type,
-            int attr_length,
+            vector<AttrType> attr_types,
+            vector<int> attr_lengths,
             int internal_max_size /* = -1 */,
             int leaf_max_size /* = -1 */)
 {
   if (internal_max_size < 0) {
-    internal_max_size = calc_internal_page_capacity(attr_length);
+    internal_max_size = calc_internal_page_capacity(attr_lengths);
   }
   if (leaf_max_size < 0) {
-    leaf_max_size = calc_leaf_page_capacity(attr_length);
+    leaf_max_size = calc_leaf_page_capacity(attr_lengths);
   }
 
   log_handler_      = &log_handler;
@@ -863,11 +871,16 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
     return RC::INTERNAL;
   }
 
+  int key_length = 0;
+  for (int i = 0; i < attr_lengths.size(); i++) {
+    key_length += attr_lengths[i];
+  }
+
   char            *pdata         = header_frame->data();
   IndexFileHeader *file_header   = (IndexFileHeader *)pdata;
-  file_header->attr_length       = attr_length;
-  file_header->key_length        = attr_length + sizeof(RID);
-  file_header->attr_type         = attr_type;
+  file_header->attr_length       = attr_lengths;  // 列长度列表
+  file_header->key_length        = key_length + sizeof(RID);  // 键长度
+  file_header->attr_type         = attr_types;  // 列类型列表
   file_header->internal_max_size = internal_max_size;
   file_header->leaf_max_size     = leaf_max_size;
   file_header->root_page         = BP_INVALID_PAGE_NUM;
@@ -1485,26 +1498,34 @@ RC BplusTreeHandler::create_new_tree(BplusTreeMiniTransaction &mtr, const char *
   return rc;
 }
 
-MemPoolItem::item_unique_ptr BplusTreeHandler::make_key(const char *user_key, const RID &rid)
+MemPoolItem::item_unique_ptr BplusTreeHandler::make_key(const char *user_key, vector<FieldMeta*> &field_metas, const RID &rid)
 {
   MemPoolItem::item_unique_ptr key = mem_pool_item_->alloc_unique_ptr();
   if (key == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
     return nullptr;
   }
-  memcpy(static_cast<char *>(key.get()), user_key, file_header_.attr_length);
-  memcpy(static_cast<char *>(key.get()) + file_header_.attr_length, &rid, sizeof(rid));
+
+  int key_offset_ = 0;
+  for (int i = 0; i < field_metas.size(); i++) {
+    assert(file_header_.attr_length[i] == field_metas[i]->len()) ;
+    memcpy(static_cast<char *>(key.get()) + key_offset_, user_key + field_metas[i]->offset(), field_metas[i]->len());
+    key_offset_ += field_metas[i]->len(); // 目的地址
+  }
+
+//  memcpy(static_cast<char *>(key.get()), user_key, file_header_.attr_length);
+  memcpy(static_cast<char *>(key.get()) + key_offset_, &rid, sizeof(rid));
   return key;
 }
 
-RC BplusTreeHandler::insert_entry(const char *user_key, const RID *rid)
+RC BplusTreeHandler::insert_entry(const char *user_key, vector<FieldMeta*> &field_metas, const RID *rid)
 {
   if (user_key == nullptr || rid == nullptr) {
     LOG_WARN("Invalid arguments, key is empty or rid is empty");
     return RC::INVALID_ARGUMENT;
   }
 
-  MemPoolItem::item_unique_ptr pkey = make_key(user_key, *rid);
+  MemPoolItem::item_unique_ptr pkey = make_key(user_key, field_metas,  *rid);
   if (pkey == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
     return RC::NOMEM;

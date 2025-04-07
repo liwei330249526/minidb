@@ -19,7 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 BplusTreeIndex::~BplusTreeIndex() noexcept { close(); }
 
-RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &index_meta, const FieldMeta &field_meta)
+RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &index_meta, vector<FieldMeta*> &field_metas)
 {
   if (inited_) {
     LOG_WARN("Failed to create index due to the index has been created before. file_name:%s, index:%s, field:%s",
@@ -27,10 +27,16 @@ RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &
     return RC::RECORD_OPENNED;
   }
 
-  Index::init(index_meta, field_meta);
+  Index::init(index_meta, field_metas);
 
   BufferPoolManager &bpm = table->db()->buffer_pool_manager();
-  RC rc = index_handler_.create(table->db()->log_handler(), bpm, file_name, field_meta.type(), field_meta.len());
+  vector<AttrType> field_meta_types;
+  vector<int> field_meta_lens;
+  for (auto &fm : field_metas) {
+    field_meta_types.push_back(fm->type());
+    field_meta_lens.push_back(fm->len());
+  }
+  RC rc = index_handler_.create(table->db()->log_handler(), bpm, file_name, field_meta_types, field_meta_lens);
   if (RC::SUCCESS != rc) {
     LOG_WARN("Failed to create index_handler, file_name:%s, index:%s, field:%s, rc:%s",
         file_name, index_meta.name(), index_meta.field(), strrc(rc));
@@ -98,7 +104,10 @@ RC BplusTreeIndex::close()
 
 RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
 {
-  return index_handler_.insert_entry(record + field_meta_.offset(), rid);
+  // 行数据，和数据位置 rid
+  // 插入 data， len 的 Vector
+
+  return index_handler_.insert_entry(record, field_metas_, rid);
 }
 
 RC BplusTreeIndex::delete_entry(const char *record, const RID *rid)

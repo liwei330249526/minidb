@@ -188,6 +188,7 @@ int TableMeta::serialize(std::ostream &ss) const
   table_value[FIELD_FIELDS] = std::move(fields_value);
 
   Json::Value indexes_value;
+  // 遍历每个索引
   for (const auto &index : indexes_) {
     Json::Value index_value;
     index.to_json(index_value);
