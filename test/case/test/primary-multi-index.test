@@ -75,3 +75,5 @@ CREATE TABLE multi_index4(id int, col1 int, col2 float, col3 char, col4 date, co
 CREATE INDEX i_4_i7 ON multi_index4(id,col7);
 CREATE INDEX i_4_78 ON multi_index4(col7,col8);
 CREATE INDEX i_4_i78 ON multi_index4(id,col7,col8);
+
+
