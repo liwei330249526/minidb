@@ -51,7 +51,7 @@ public:
   static RC from_json(const Json::Value &json_value, FieldMeta &field);
 
 protected:
-  string   name_;
+  string   name_;     // 列名字
   AttrType attr_type_; // 列类型
   int      attr_offset_; // 这个列所在的地址偏移
   int      attr_len_; // 列的长度 ，  对Vector 而言，应该是Vector 元素个数 * float

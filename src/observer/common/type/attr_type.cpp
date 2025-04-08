@@ -22,6 +22,25 @@ const char *attr_type_to_string(AttrType type)
   return "unknown";
 }
 
+string attr_type_to_string(vector<AttrType> types)
+{
+  string res;
+  for (int i = 0; i < types.size(); i++) {
+    AttrType type = types[i];
+
+    if (type >= AttrType::UNDEFINED && type < AttrType::MAXTYPE) {
+      res += ATTR_TYPE_NAME[static_cast<int>(type)];
+      if (i != types.size()-1) {
+        res += '-';
+      }
+    }
+  }
+  if (res.empty()) {
+    return "unknown";
+  }
+  return res;
+}
+
 AttrType attr_type_from_string(const char *s)
 {
   for (unsigned int i = 0; i < sizeof(ATTR_TYPE_NAME) / sizeof(ATTR_TYPE_NAME[0]); i++) {

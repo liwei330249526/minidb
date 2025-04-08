@@ -85,7 +85,7 @@ public:
   RC recover_insert_record(Record &record);
 
   // TODO refactor
-  RC create_index(Trx *trx, vector<FieldMeta*> &field_metas, const char *index_name);
+  RC create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const char *index_name);
 
   RC get_record_scanner(RecordFileScanner &scanner, Trx *trx, ReadWriteMode mode);
 
@@ -123,6 +123,7 @@ private:
 public:
   Index *find_index(const char *index_name) const;
   Index *find_index_by_field(const char *field_name) const;
+  Index *find_index_by_field(vector<const char*> field_name) const;
 
 private:
   Db                *db_ = nullptr;

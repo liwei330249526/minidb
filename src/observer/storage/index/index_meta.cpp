@@ -22,7 +22,7 @@ See the Mulan PSL v2 for more details. */
 const static Json::StaticString FIELD_NAME("name");
 const static Json::StaticString FIELD_FIELD_NAME("field_name");
 
-RC IndexMeta::init(const char *name, vector<FieldMeta*> &field_metas)
+RC IndexMeta::init(const char *name, const vector<FieldMeta*> &field_metas)
 {
   if (common::is_blank(name)) {
     LOG_ERROR("Failed to init index, name is empty.");
@@ -30,8 +30,13 @@ RC IndexMeta::init(const char *name, vector<FieldMeta*> &field_metas)
   }
 
   name_  = name;
-  for (auto &fm : field_metas) {
+  for (size_t i = 0; i < field_metas.size(); i++) {
+    FieldMeta *fm = field_metas[i];
     field_metas_.push_back(*fm);
+    field_metas_str_ += fm->name();
+    if (i != field_metas.size()) {
+      field_metas_str_ += '-';
+    }
   }
 //  for (auto &fm : field_metas) {
 //    field_.push_back(fm->name());
@@ -76,7 +81,7 @@ RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, I
   if (!field_value.isString()) {
     LOG_ERROR("Field name of index [%s] is not a string. json value=%s",
         name_value.asCString(), field_value.toStyledString().c_str());
-    return RC::INTERNAL;
+//    return RC::INTERNAL;
   }
 
 //  const FieldMeta *field = table.field(field_value.asCString());
@@ -94,8 +99,16 @@ RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, I
 
 const char *IndexMeta::name() const { return name_.c_str(); }
 
-const char *IndexMeta::field() const { return field_.c_str(); }
+const char *IndexMeta::field() const { return field_metas_str_.c_str(); }
 
-void IndexMeta::desc(ostream &os) const { os << "index name=" << name_ << ", field=" << field_; }
+void IndexMeta::desc(ostream &os) const { os << "index name=" << name_ << ", field=" << field_metas_str_; }
+
+const vector<FieldMeta> &IndexMeta::getFieldMetas() const {
+  return field_metas_;
+}
+
+void IndexMeta::setFieldMetas(const vector<FieldMeta> &fieldMetas) {
+  field_metas_ = fieldMetas;
+}
 
 

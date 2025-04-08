@@ -31,11 +31,10 @@ using namespace common;
 RC list_all_values(BplusTreeHandler &tree_handler, vector<RID> &rids)
 {
   auto scanner = make_unique<BplusTreeScanner>(tree_handler);
-  RC   rc      = scanner->open(nullptr /*left_user_key*/,
-      0 /*left_len*/,
+  vector<Value> user_key;
+  RC   rc      = scanner->open(user_key,
       true /*left_inclusive*/,
-      nullptr /*right_user_key*/,
-      0 /*right_len*/,
+                               user_key,
       true /*right_inclusive*/);
   if (OB_SUCC(rc)) {
     RID rid;
@@ -73,8 +72,10 @@ TEST(BplusTreeLog, base)
   ASSERT_EQ(RC::SUCCESS, log_handler->replay(log_replayer, 0));
   ASSERT_EQ(RC::SUCCESS, log_handler->start());
 
+  vector<AttrType> attr_types{AttrType::INTS};
+  vector<int> attr_lengths{4};
   auto bplus_tree = make_unique<BplusTreeHandler>();
-  ASSERT_EQ(RC::SUCCESS, bplus_tree->create(*log_handler, *buffer_pool, AttrType::INTS, 4));
+  ASSERT_EQ(RC::SUCCESS, bplus_tree->create(*log_handler, *buffer_pool, attr_types, attr_lengths));
 
   // 2. insert some key-value pairs into the bplus tree
   const int   insert_num = 10000;
@@ -90,7 +91,9 @@ TEST(BplusTreeLog, base)
   for (int i : keys) {
     RID rid(i, i);
     int key = i;
-    ASSERT_EQ(RC::SUCCESS, bplus_tree->insert_entry(reinterpret_cast<const char *>(&key), &rid));
+    vector<DataWrapper> datas;
+    datas.push_back({reinterpret_cast<char *>(&key), sizeof(key)});
+    ASSERT_EQ(RC::SUCCESS, bplus_tree->insert_entry(datas, &rid));
   }
 
   // 3. write logs to disk
@@ -127,12 +130,11 @@ TEST(BplusTreeLog, base)
   ASSERT_EQ(RC::SUCCESS, tree_handler2->open(*log_handler2, *buffer_pool2));
 
   auto scanner = make_unique<BplusTreeScanner>(*tree_handler2);
+  vector<Value> key;
   ASSERT_EQ(RC::SUCCESS,
-      scanner->open(nullptr /*left_user_key*/,
-          0 /*left_len*/,
+      scanner->open(key,
           true /*left_inclusive*/,
-          nullptr /*right_user_key*/,
-          0 /*right_len*/,
+                    key,
           true /*right_inclusive*/));
 
   RC          rc = RC::SUCCESS;
@@ -192,7 +194,9 @@ TEST(BplusTreeLog, concurrency)
   vector<unique_ptr<BplusTreeHandler>> bplus_trees;
   for (DiskBufferPool *buffer_pool : buffer_pools) {
     auto bplus_tree = make_unique<BplusTreeHandler>();
-    ASSERT_EQ(RC::SUCCESS, bplus_tree->create(*log_handler, *buffer_pool, AttrType::INTS, 4));
+    vector<AttrType> attr_types{AttrType::INTS};
+    vector<int> attr_lengths{4};
+    ASSERT_EQ(RC::SUCCESS, bplus_tree->create(*log_handler, *buffer_pool, attr_types, attr_lengths));
     bplus_trees.push_back(std::move(bplus_tree));
   }
 
@@ -216,7 +220,9 @@ TEST(BplusTreeLog, concurrency)
     executor.execute([&bplus_trees, &tree_index_generator, i]() {
       RID rid(i, i);
       int tree_index = tree_index_generator.next();
-      ASSERT_EQ(RC::SUCCESS, bplus_trees[tree_index]->insert_entry(reinterpret_cast<const char *>(&i), &rid));
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
+      ASSERT_EQ(RC::SUCCESS, bplus_trees[tree_index]->insert_entry(datas, &rid));
     });
   }
 
@@ -227,10 +233,12 @@ TEST(BplusTreeLog, concurrency)
       int tree_index      = tree_index_generator.next();
       int operation_index = operation_index_generator.next();
       RID rid(i, i);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
       if (0 == operation_index) {
-        bplus_trees[tree_index]->insert_entry(reinterpret_cast<const char *>(&i), &rid);
+        bplus_trees[tree_index]->insert_entry(datas, &rid);
       } else {
-        bplus_trees[tree_index]->delete_entry(reinterpret_cast<const char *>(&i), &rid);
+        bplus_trees[tree_index]->delete_entry(datas, &rid);
       }
     });
   }

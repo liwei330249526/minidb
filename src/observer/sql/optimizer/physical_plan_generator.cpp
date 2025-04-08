@@ -142,6 +142,8 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
 
   Index     *index      = nullptr;
   ValueExpr *value_expr = nullptr;
+  vector<Value> values;
+  vector<const char*> names;
   for (auto &expr : predicates) {
     if (expr->type() == ExprType::COMPARISON) {
       auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
@@ -171,25 +173,31 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       if (field_expr == nullptr) {
         continue;
       }
-
+      // 获取 field
       const Field &field = field_expr->field();
-      index              = table->find_index_by_field(field.field_name());
-      if (nullptr != index) {
-        break;
-      }
+      names.push_back(field.field_name());
+      values.push_back(value_expr->get_value());
+      // 通过 field name 获取 index
+//      index              = table->find_index_by_field(field.field_name());
+//      if (nullptr != index) {
+//        break;
+//      }
     }
   }
+
+  // 通过 field name 获取 index
+  index              = table->find_index_by_field(names);
 
   if (index != nullptr) {
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
-    const Value               &value           = value_expr->get_value();
+//    const Value               &value           = value_expr->get_value();
     IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(table,
         index,
         table_get_oper.read_write_mode(),
-        &value,
+        values,
         true /*left_inclusive*/,
-        &value,
+        values,
         true /*right_inclusive*/);
 
     index_scan_oper->set_predicates(std::move(predicates));

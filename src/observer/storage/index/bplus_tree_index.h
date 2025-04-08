@@ -27,9 +27,9 @@ public:
   BplusTreeIndex() = default;
   virtual ~BplusTreeIndex() noexcept;
 
-  RC create(Table *table, const char *file_name, const IndexMeta &index_meta, vector<FieldMeta*> &field_metas) override;
+  RC create(Table *table, const char *file_name, const IndexMeta &index_meta, const vector<FieldMeta*> &field_metas) override;
 	virtual RC drop(Table *table, const char *file_name, const IndexMeta &index_meta) override;
-  RC open(Table *table, const char *file_name, const IndexMeta &index_meta, const FieldMeta &field_meta) override;
+  RC open(Table *table, const char *file_name, const IndexMeta &index_meta, vector<FieldMeta*> &field_metas) override;
   RC close();
 
   RC insert_entry(const char *record, const RID *rid) override;
@@ -38,8 +38,7 @@ public:
   /**
    * 扫描指定范围的数据
    */
-  IndexScanner *create_scanner(const char *left_key, int left_len, bool left_inclusive, const char *right_key,
-      int right_len, bool right_inclusive) override;
+  IndexScanner *create_scanner(vector<Value> &left_key, bool left_inclusive, vector<Value> &right_key, bool right_inclusive) override;
 
   RC sync() override;
 
@@ -62,8 +61,7 @@ public:
   RC next_entry(RID *rid) override;
   RC destroy() override;
 
-  RC open(const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len,
-      bool right_inclusive);
+  RC open(vector<Value> &left_key, bool left_inclusive, vector<Value> &right_key,bool right_inclusive);
 
 private:
   BplusTreeScanner tree_scanner_;

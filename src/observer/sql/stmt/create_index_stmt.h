@@ -42,14 +42,14 @@ public:
 
   Table             *table() const { return table_; }
   const FieldMeta   *field_meta() const { return field_meta_; }
-  vector<FieldMeta*> field_metas() const { return field_metas_; }
+  const vector<FieldMeta*> &field_metas() const { return field_metas_; }
   const std::string &index_name() const { return index_name_; }
 
 public:
   static RC create(Db *db, const CreateIndexSqlNode &create_index, Stmt *&stmt);
 
 private:
-  Table           *table_      = nullptr;
+  Table           *table_      = nullptr;  // 表
   const FieldMeta *field_meta_ = nullptr; // 弃用
   vector<FieldMeta*> field_metas_; // 索引列表
   std::string      index_name_;

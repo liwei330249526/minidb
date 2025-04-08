@@ -16,19 +16,19 @@ See the Mulan PSL v2 for more details. */
 #include "storage/index/index.h"
 #include "storage/trx/trx.h"
 
-IndexScanPhysicalOperator::IndexScanPhysicalOperator(Table *table, Index *index, ReadWriteMode mode, const Value *left_value,
-    bool left_inclusive, const Value *right_value, bool right_inclusive)
+IndexScanPhysicalOperator::IndexScanPhysicalOperator(Table *table, Index *index, ReadWriteMode mode, vector<Value> &left_value,
+    bool left_inclusive, vector<Value> &right_value, bool right_inclusive)
     : table_(table),
       index_(index),
       mode_(mode),
       left_inclusive_(left_inclusive),
       right_inclusive_(right_inclusive)
 {
-  if (left_value) {
-    left_value_ = *left_value;
+  if (!left_value.empty()) {
+    left_value_ = left_value;
   }
-  if (right_value) {
-    right_value_ = *right_value;
+  if (!right_value.empty()) {
+    right_value_ = right_value;
   }
 }
 
@@ -38,11 +38,9 @@ RC IndexScanPhysicalOperator::open(Trx *trx)
     return RC::INTERNAL;
   }
 
-  IndexScanner *index_scanner = index_->create_scanner(left_value_.data(),
-      left_value_.length(),
+  IndexScanner *index_scanner = index_->create_scanner(left_value_,
       left_inclusive_,
-      right_value_.data(),
-      right_value_.length(),
+      right_value_,
       right_inclusive_);
   if (nullptr == index_scanner) {
     LOG_WARN("failed to create index scanner");

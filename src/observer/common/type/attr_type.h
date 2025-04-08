@@ -30,4 +30,5 @@ enum class AttrType
 };
 
 const char *attr_type_to_string(AttrType type);
+string attr_type_to_string(vector<AttrType> type);
 AttrType    attr_type_from_string(const char *s);

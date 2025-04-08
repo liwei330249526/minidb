@@ -19,7 +19,7 @@ See the Mulan PSL v2 for more details. */
 
 BplusTreeIndex::~BplusTreeIndex() noexcept { close(); }
 
-RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &index_meta, vector<FieldMeta*> &field_metas)
+RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &index_meta, const vector<FieldMeta*> &field_metas)
 {
   if (inited_) {
     LOG_WARN("Failed to create index due to the index has been created before. file_name:%s, index:%s, field:%s",
@@ -66,7 +66,7 @@ RC BplusTreeIndex::drop(Table *table, const char *file_name, const IndexMeta &in
 	return rc;
 }
 
-RC BplusTreeIndex::open(Table *table, const char *file_name, const IndexMeta &index_meta, const FieldMeta &field_meta)
+RC BplusTreeIndex::open(Table *table, const char *file_name, const IndexMeta &index_meta, vector<FieldMeta*> &field_metas)
 {
   if (inited_) {
     LOG_WARN("Failed to open index due to the index has been initedd before. file_name:%s, index:%s, field:%s",
@@ -74,7 +74,7 @@ RC BplusTreeIndex::open(Table *table, const char *file_name, const IndexMeta &in
     return RC::RECORD_OPENNED;
   }
 
-  Index::init(index_meta, field_meta);
+  Index::init(index_meta, field_metas);
 
   BufferPoolManager &bpm = table->db()->buffer_pool_manager();
   RC rc = index_handler_.open(table->db()->log_handler(), bpm, file_name);
@@ -106,20 +106,29 @@ RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
 {
   // 行数据，和数据位置 rid
   // 插入 data， len 的 Vector
-
-  return index_handler_.insert_entry(record, field_metas_, rid);
+  vector<DataWrapper> datas;
+  for (auto &fm : index_meta_.getFieldMetas()) {
+    datas.push_back({record + fm.offset(), fm.len()});
+  }
+  return index_handler_.insert_entry(datas, rid);
 }
 
 RC BplusTreeIndex::delete_entry(const char *record, const RID *rid)
 {
-  return index_handler_.delete_entry(record + field_meta_.offset(), rid);
+  // 行数据，和数据位置 rid
+  // 插入 data， len 的 Vector
+  vector<DataWrapper> datas;
+  for (auto &fm : index_meta_.getFieldMetas()) {
+    datas.push_back({record + fm.offset(), fm.len()});
+  }
+  return index_handler_.delete_entry(datas, rid);
 }
 
 IndexScanner *BplusTreeIndex::create_scanner(
-    const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len, bool right_inclusive)
+        vector<Value> &left_key, bool left_inclusive, vector<Value> &right_key, bool right_inclusive)
 {
   BplusTreeIndexScanner *index_scanner = new BplusTreeIndexScanner(index_handler_);
-  RC rc = index_scanner->open(left_key, left_len, left_inclusive, right_key, right_len, right_inclusive);
+  RC rc = index_scanner->open(left_key, left_inclusive, right_key, right_inclusive);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open index scanner. rc=%d:%s", rc, strrc(rc));
     delete index_scanner;
@@ -136,9 +145,9 @@ BplusTreeIndexScanner::BplusTreeIndexScanner(BplusTreeHandler &tree_handler) : t
 BplusTreeIndexScanner::~BplusTreeIndexScanner() noexcept { tree_scanner_.close(); }
 
 RC BplusTreeIndexScanner::open(
-    const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len, bool right_inclusive)
+        vector<Value> &left_key, bool left_inclusive, vector<Value> &right_key, bool right_inclusive)
 {
-  return tree_scanner_.open(left_key, left_len, left_inclusive, right_key, right_len, right_inclusive);
+  return tree_scanner_.open(left_key, left_inclusive, right_key, right_inclusive);
 }
 
 RC BplusTreeIndexScanner::next_entry(RID *rid) { return tree_scanner_.next_entry(*rid); }

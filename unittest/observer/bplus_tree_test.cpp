@@ -58,7 +58,9 @@ void test_insert(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Insert %d. rid=%s", i, rid.to_string().c_str());
       }
-      rc = handler->insert_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<char *>(&i), sizeof(i)});
+      rc = handler->insert_entry(datas, &rid);
       ASSERT_EQ(RC::SUCCESS, rc);
       handler->print_tree();
       ASSERT_EQ(true, handler->validate_tree());
@@ -79,7 +81,9 @@ void test_insert(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Insert %d. rid=%s", i, rid.to_string().c_str());
       }
-      rc = handler->insert_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<char *>(&i), sizeof(i)});
+      rc = handler->insert_entry(datas, &rid);
       ASSERT_EQ(RC::SUCCESS, rc);
       handler->print_tree();
       ASSERT_EQ(true, handler->validate_tree());
@@ -100,7 +104,9 @@ void test_insert(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Insert %d. rid=%s", i, rid.to_string().c_str());
       }
-      rc = handler->insert_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<char *>(&i), sizeof(i)});
+      rc = handler->insert_entry(datas, &rid);
       ASSERT_EQ(RC::SUCCESS, rc);
       ASSERT_EQ(true, handler->validate_tree());
     }
@@ -123,7 +129,9 @@ void test_insert(BplusTreeHandler *handler)
     } else {
       LOG_INFO("check duplicate Insert %d. rid=%s. TIMES=%d", i, rid.to_string().c_str(), TIMES);
     }
-    rc    = handler->insert_entry((const char *)&i, &rid);
+    vector<DataWrapper> datas;
+    datas.push_back({reinterpret_cast<char *>(&i), sizeof(i)});
+    rc    = handler->insert_entry(datas, &rid);
     int t = i % TIMES;
     if (t == 0 || t == 1 || t == 2) {
       if (rc != RC::RECORD_DUPLICATE_KEY) {
@@ -154,7 +162,10 @@ void test_get(BplusTreeHandler *handler)
     }
 
     rids.clear();
-    RC rc = handler->get_entry((const char *)&i, 4, rids);
+    Value val(reinterpret_cast<char *>(&i), 4);
+    vector<Value> vals;
+    vals.push_back(val);
+    RC rc = handler->get_entry(vals, rids);
 
     ASSERT_EQ(RC::SUCCESS, rc);
     ASSERT_EQ(1, rids.size());
@@ -184,8 +195,9 @@ void test_delete(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Begin to delete entry of index,  i=%d, rid: %s", i, rid.to_string().c_str());
       }
-
-      rc = handler->delete_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
+      rc = handler->delete_entry(datas, &rid);
       if (rc != RC::SUCCESS) {
         LOG_WARN("failed to delete entry. i=%d, rid=%s", i, rid.to_string().c_str());
       }
@@ -210,7 +222,9 @@ void test_delete(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Begin to delete entry of index,  rid: %s", rid.to_string().c_str());
       }
-      rc = handler->delete_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
+      rc = handler->delete_entry(datas, &rid);
 
       ASSERT_EQ(true, handler->validate_tree());
       ASSERT_EQ(RC::SUCCESS, rc);
@@ -229,7 +243,10 @@ void test_delete(BplusTreeHandler *handler)
       LOG_INFO("Begin to get entry of index, i=%d, rid: %s", i, rid.to_string().c_str());
     }
     rids.clear();
-    rc = handler->get_entry((const char *)&i, 4, rids);
+    Value val(reinterpret_cast<char *>(&i), 4);
+    vector<Value> vals;
+    vals.push_back(val);
+    rc = handler->get_entry(vals, rids);
     ASSERT_EQ(RC::SUCCESS, rc);
     int t = i % TIMES;
     if (t == 0 || t == 1) {
@@ -263,7 +280,9 @@ void test_delete(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Begin to delete entry of index,  rid: %s", rid.to_string().c_str());
       }
-      rc = handler->delete_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
+      rc = handler->delete_entry(datas, &rid);
 
       ASSERT_EQ(true, handler->validate_tree());
       ASSERT_EQ(RC::SUCCESS, rc);
@@ -285,7 +304,9 @@ void test_delete(BplusTreeHandler *handler)
       } else {
         LOG_INFO("Begin to delete entry of index,  rid: %s", rid.to_string().c_str());
       }
-      rc = handler->delete_entry((const char *)&i, &rid);
+      vector<DataWrapper> datas;
+      datas.push_back({reinterpret_cast<const char *>(&i), sizeof(i)});
+      rc = handler->delete_entry(datas, &rid);
 
       ASSERT_EQ(true, handler->validate_tree());
       ASSERT_EQ(RC::SUCCESS, rc);
@@ -304,7 +325,9 @@ void test_delete(BplusTreeHandler *handler)
     } else {
       LOG_INFO("Begin to insert entry of index,  rid: %s", rid.to_string().c_str());
     }
-    rc    = handler->insert_entry((const char *)&i, &rid);
+    vector<DataWrapper> datas;
+    datas.push_back({reinterpret_cast<char *>(&i), sizeof(i)});
+    rc    = handler->insert_entry(datas, &rid);
     int t = i % TIMES;
     if (t == 0 || t == 1 || t == 2) {
       ASSERT_EQ(RC::SUCCESS, rc);
@@ -328,9 +351,14 @@ TEST(test_bplus_tree, test_leaf_index_node_handle)
   index_file_header.root_page         = BP_INVALID_PAGE_NUM;
   index_file_header.internal_max_size = 5;
   index_file_header.leaf_max_size     = 5;
-  index_file_header.attr_length       = 4;
+  index_file_header.attr_num_ = 20;
+  for (int i = 0; i < index_file_header.attr_num_; i++) {
+    index_file_header.attr_length[i]       = 4;
+    index_file_header.attr_type[i]         = AttrType::INTS;
+  }
+//  index_file_header.attr_length       = 4;
   index_file_header.key_length        = 4 + sizeof(RID);
-  index_file_header.attr_type         = AttrType::INTS;
+//  index_file_header.attr_type         = AttrType::INTS;
 
   VacuousLogHandler log_handler;
   BufferPoolManager bpm;
@@ -341,11 +369,18 @@ TEST(test_bplus_tree, test_leaf_index_node_handle)
   ASSERT_EQ(RC::SUCCESS, bpm.open_file(log_handler, buffer_pool_file.c_str(), buffer_pool));
 
   BplusTreeHandler tree_handler;
+
+  vector<AttrType> field_meta_types;
+  vector<int> field_meta_lens;
+  for (int32_t i = 0; i < index_file_header.attr_num_; i++) {
+    field_meta_types.push_back(index_file_header.attr_type[i]);
+    field_meta_lens.push_back(index_file_header.attr_length[i]);
+  }
   ASSERT_EQ(RC::SUCCESS,
       tree_handler.create(log_handler,
           *buffer_pool,
-          index_file_header.attr_type,
-          index_file_header.attr_length,
+                          field_meta_types,
+                          field_meta_lens,
           index_file_header.internal_max_size,
           index_file_header.leaf_max_size));
   BplusTreeMiniTransaction mtr(tree_handler);
@@ -353,7 +388,9 @@ TEST(test_bplus_tree, test_leaf_index_node_handle)
   Frame frame;
 
   KeyComparator key_comparator;
-  key_comparator.init(AttrType::INTS, 4);
+  vector<AttrType> attr_types{AttrType::INTS};
+  vector<int> attr_lengths{4};
+  key_comparator.init(attr_types, attr_lengths);
 
   LeafIndexNodeHandler leaf_node(mtr, index_file_header, &frame);
   leaf_node.init_empty();
@@ -409,9 +446,14 @@ TEST(test_bplus_tree, test_internal_index_node_handle)
   index_file_header.root_page         = BP_INVALID_PAGE_NUM;
   index_file_header.internal_max_size = 5;
   index_file_header.leaf_max_size     = 5;
-  index_file_header.attr_length       = 4;
+  index_file_header.attr_num_ = 20;
+  for (int i = 0; i < index_file_header.attr_num_; i++) {
+    index_file_header.attr_length[i]       = 4;
+    index_file_header.attr_type[i]         = AttrType::INTS;
+  }
+//  index_file_header.attr_length       = 4;
   index_file_header.key_length        = 4 + sizeof(RID);
-  index_file_header.attr_type         = AttrType::INTS;
+//  index_file_header.attr_type         = AttrType::INTS;
 
   VacuousLogHandler log_handler;
   BufferPoolManager bpm;
@@ -423,11 +465,17 @@ TEST(test_bplus_tree, test_internal_index_node_handle)
   ASSERT_NE(nullptr, buffer_pool);
 
   BplusTreeHandler tree_handler;
+  vector<AttrType> field_meta_types;
+  vector<int> field_meta_lens;
+  for (int32_t i = 0; i < index_file_header.attr_num_; i++) {
+    field_meta_types.push_back(index_file_header.attr_type[i]);
+    field_meta_lens.push_back(index_file_header.attr_length[i]);
+  }
   ASSERT_EQ(RC::SUCCESS,
       tree_handler.create(log_handler,
           *buffer_pool,
-          index_file_header.attr_type,
-          index_file_header.attr_length,
+                          field_meta_types,
+                          field_meta_lens,
           index_file_header.internal_max_size,
           index_file_header.leaf_max_size));
   BplusTreeMiniTransaction mtr(tree_handler);
@@ -435,7 +483,9 @@ TEST(test_bplus_tree, test_internal_index_node_handle)
   Frame frame;
 
   KeyComparator key_comparator;
-  key_comparator.init(AttrType::INTS, 4);
+  vector<AttrType> attr_types{AttrType::INTS};
+  vector<int> attr_lengths{4};
+  key_comparator.init(attr_types, attr_lengths);
 
   InternalIndexNodeHandler internal_node(mtr, index_file_header, &frame);
   internal_node.init_empty();
@@ -538,7 +588,13 @@ TEST(test_bplus_tree, test_chars)
   ASSERT_NE(nullptr, buffer_pool);
 
   BplusTreeHandler handler;
-  ASSERT_EQ(RC::SUCCESS, handler.create(log_handler, *buffer_pool, AttrType::CHARS, 8, ORDER, ORDER));
+  vector<AttrType> field_meta_types;
+  vector<int> field_meta_lens;
+//  for (size_t i = 0; i < index_file_header.attr_num_; i++) {
+    field_meta_types.push_back(AttrType::CHARS);
+    field_meta_lens.push_back(8);
+//  }
+  ASSERT_EQ(RC::SUCCESS, handler.create(log_handler, *buffer_pool, field_meta_types, field_meta_lens, ORDER, ORDER));
 
   char keys[][9] = {"abcdefg", "12345678", "12345678", "abcdefg", "abcdefga"};
 
@@ -547,7 +603,10 @@ TEST(test_bplus_tree, test_chars)
   for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
     rid.page_num = 0;
     rid.slot_num = i;
-    rc           = handler.insert_entry(keys[i], &rid);
+    // 插入 data， len 的 Vector
+    vector<DataWrapper> datas;
+    datas.push_back({reinterpret_cast<char *>(keys[i]), 8}); // 长度是8
+    rc           = handler.insert_entry(datas, &rid);
     ASSERT_EQ(RC::SUCCESS, rc);
   }
 
@@ -557,7 +616,10 @@ TEST(test_bplus_tree, test_chars)
 
   BplusTreeScanner scanner(handler);
   const char      *key = "abcdefg";
-  rc                   = scanner.open(key, strlen(key), true, key, strlen(key), true);
+  vector<Value> left_user_key;
+  Value val(key, strlen(key));
+  left_user_key.push_back(val);
+  rc                   = scanner.open(left_user_key, true, left_user_key, true);
   ASSERT_EQ(rc, RC::SUCCESS);
 
   int count = 0;
@@ -588,7 +650,14 @@ TEST(test_bplus_tree, test_scanner)
   ASSERT_NE(nullptr, buffer_pool);
 
   BplusTreeHandler handler;
-  ASSERT_EQ(RC::SUCCESS, handler.create(log_handler, *buffer_pool, AttrType::INTS, sizeof(int), ORDER, ORDER));
+
+  vector<AttrType> field_meta_types;
+  vector<int> field_meta_lens;
+//  for (auto &fm : field_metas) {
+    field_meta_types.push_back(AttrType::INTS);
+    field_meta_lens.push_back(sizeof(int));
+//  }
+  ASSERT_EQ(RC::SUCCESS, handler.create(log_handler, *buffer_pool, field_meta_types, field_meta_lens, ORDER, ORDER));
 
   int count = 0;
   RC  rc    = RC::SUCCESS;
@@ -598,7 +667,9 @@ TEST(test_bplus_tree, test_scanner)
     int key      = i * 2 + 1;
     rid.page_num = 0;
     rid.slot_num = key;
-    rc           = handler.insert_entry((const char *)&key, &rid);
+    vector<DataWrapper> datas;
+    datas.push_back({reinterpret_cast<char *>(&key), sizeof(key)});
+    rc           = handler.insert_entry(datas, &rid);
     ASSERT_EQ(RC::SUCCESS, rc);
   }
 
@@ -608,7 +679,15 @@ TEST(test_bplus_tree, test_scanner)
 
   int begin = -100;
   int end   = -20;
-  rc        = scanner.open((const char *)&begin, 4, false, (const char *)&end, 4, false);
+  vector<Value> left_user_key;
+  Value vall(begin);
+  left_user_key.push_back(vall);
+
+  vector<Value> right_user_key;
+  Value valr(end);
+  right_user_key.push_back(valr);
+
+  rc        = scanner.open(left_user_key, false, right_user_key, false);
   ASSERT_EQ(RC::SUCCESS, rc);
 
   rc = scanner.next_entry(rid);
@@ -618,7 +697,13 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = -100;
   end   = 1;
-  rc    = scanner.open((const char *)&begin, 4, false, (const char *)&end, 4, false);
+  left_user_key.clear();
+  Value vall2(begin);
+  left_user_key.push_back(vall2);
+  right_user_key.clear();
+  Value valr2(end);
+  right_user_key.push_back(valr2);
+  rc    = scanner.open(left_user_key, false, right_user_key, false);
   ASSERT_EQ(RC::SUCCESS, rc);
   rc = scanner.next_entry(rid);
   ASSERT_EQ(RC::RECORD_EOF, rc);
@@ -627,7 +712,13 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = -100;
   end   = 1;
-  rc    = scanner.open((const char *)&begin, 4, false, (const char *)&end, 4, true /*inclusive*/);
+  left_user_key.clear();
+  Value vall3(begin);
+  left_user_key.push_back(vall3);
+  right_user_key.clear();
+  Value valr3(end);
+  right_user_key.push_back(valr3);
+  rc    = scanner.open(left_user_key, false, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   rc = scanner.next_entry(rid);
   ASSERT_EQ(RC::SUCCESS, rc);
@@ -638,7 +729,13 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 1;
   end   = 3;
-  rc    = scanner.open((const char *)&begin, 4, false, (const char *)&end, 4, false /*inclusive*/);
+  left_user_key.clear();
+  Value vall4(begin);
+  left_user_key.push_back(vall4);
+  right_user_key.clear();
+  Value valr4(end);
+  right_user_key.push_back(valr4);
+  rc    = scanner.open(left_user_key, false, right_user_key, false /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   rc = scanner.next_entry(rid);
   ASSERT_EQ(RC::RECORD_EOF, rc);
@@ -647,7 +744,13 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 1;
   end   = 3;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+  left_user_key.clear();
+  Value vall5(begin);
+  left_user_key.push_back(vall5);
+  right_user_key.clear();
+  Value valr5(end);
+  right_user_key.push_back(valr5);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
     count++;
@@ -659,7 +762,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 0;
   end   = 3;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall6(begin);
+  left_user_key.push_back(vall6);
+  right_user_key.clear();
+  Value valr6(end);
+  right_user_key.push_back(valr6);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -672,7 +782,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 11;
   end   = 21;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall7(begin);
+  left_user_key.push_back(vall7);
+  right_user_key.clear();
+  Value valr7(end);
+  right_user_key.push_back(valr7);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -685,7 +802,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 11;
   end   = 91;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall8(begin);
+  left_user_key.push_back(vall8);
+  right_user_key.clear();
+  Value valr8(end);
+  right_user_key.push_back(valr8);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -698,7 +822,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 191;
   end   = 199;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall9(begin);
+  left_user_key.push_back(vall9);
+  right_user_key.clear();
+  Value valr9(end);
+  right_user_key.push_back(valr9);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -711,7 +842,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 191;
   end   = 201;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall10(begin);
+  left_user_key.push_back(vall10);
+  right_user_key.clear();
+  Value valr10(end);
+  right_user_key.push_back(valr10);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -724,7 +862,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 200;
   end   = 301;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall11(begin);
+  left_user_key.push_back(vall11);
+  right_user_key.clear();
+  Value valr11(end);
+  right_user_key.push_back(valr11);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   rc = scanner.next_entry(rid);
   ASSERT_EQ(RC::RECORD_EOF, rc);
@@ -733,14 +878,27 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 300;
   end   = 201;
-  rc    = scanner.open((const char *)&begin, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall12(begin);
+  left_user_key.push_back(vall12);
+  right_user_key.clear();
+  Value valr12(end);
+  right_user_key.push_back(valr12);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::INVALID_ARGUMENT, rc);
 
   scanner.close();
 
   begin = 300;
   end   = 201;
-  rc    = scanner.open(nullptr, 4, true, (const char *)&end, 4, true /*inclusive*/);
+  left_user_key.clear();
+//  Value vall13(begin);
+//  left_user_key.push_back(vall13);
+  right_user_key.clear();
+  Value valr13(end);
+  right_user_key.push_back(valr13);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -753,7 +911,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 300;
   end   = 10;
-  rc    = scanner.open(nullptr, 4, true, (const char *)&end, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+//  Value vall14(begin);
+//  left_user_key.push_back(vall14);
+  right_user_key.clear();
+  Value valr14(end);
+  right_user_key.push_back(valr14);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -766,7 +931,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 190;
   end   = 10;
-  rc    = scanner.open((const char *)&begin, 4, true, nullptr, 4, true /*inclusive*/);
+
+  left_user_key.clear();
+  Value vall15(begin);
+  left_user_key.push_back(vall15);
+  right_user_key.clear();
+//  Value valr15(end);
+//  right_user_key.push_back(valr15);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -779,7 +951,14 @@ TEST(test_bplus_tree, test_scanner)
 
   begin = 190;
   end   = 10;
-  rc    = scanner.open(nullptr, 0, true, nullptr, 0, true /*inclusive*/);
+
+  left_user_key.clear();
+//  Value vall16(begin);
+//  left_user_key.push_back(vall16);
+  right_user_key.clear();
+//  Value valr16(end);
+//  right_user_key.push_back(valr16);
+  rc    = scanner.open(left_user_key, true, right_user_key, true /*inclusive*/);
   ASSERT_EQ(RC::SUCCESS, rc);
   count = 0;
   while ((rc = scanner.next_entry(rid)) == RC::SUCCESS) {
@@ -813,7 +992,9 @@ TEST(test_bplus_tree, test_bplus_tree_insert)
   ASSERT_NE(nullptr, buffer_pool);
 
   BplusTreeHandler *handler = new BplusTreeHandler();
-  ASSERT_EQ(RC::SUCCESS, handler->create(log_handler, *buffer_pool, AttrType::INTS, sizeof(int), ORDER, ORDER));
+  vector<AttrType> attr_types{AttrType::INTS};
+  vector<int> attr_lengths{sizeof(int)};
+  ASSERT_EQ(RC::SUCCESS, handler->create(log_handler, *buffer_pool, attr_types, attr_lengths, ORDER, ORDER));
 
   test_insert(handler);
 

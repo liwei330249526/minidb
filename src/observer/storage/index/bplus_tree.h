@@ -29,6 +29,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/record/record_manager.h"
 #include "storage/index/latch_memo.h"
 #include "storage/index/bplus_tree_log.h"
+#include "index.h"
 
 class BplusTreeHandler;
 class BplusTreeMiniTransaction;
@@ -56,29 +57,81 @@ enum class BplusTreeOperationType
 class AttrComparator
 {
 public:
-  void init(AttrType type, int length)
+  void init(vector<AttrType> types, vector<int> lengths)
   {
-    attr_type_   = type;
-    attr_length_ = length;
+    attr_type_   = types;
+    attr_length_ = lengths;
   }
 
-  int attr_length() const { return attr_length_; }
+  int attr_length() const {
+    int ret = 0;
+    for (size_t i = 0; i < attr_length_.size(); i++) {
+      ret += attr_length_[i];
+    }
+    return ret;
+  }
 
   int operator()(const char *v1, const char *v2) const
   {
     // TODO: optimized the comparison
-    Value left;
-    left.set_type(attr_type_);
-    left.set_data(v1, attr_length_);
-    Value right;
-    right.set_type(attr_type_);
-    right.set_data(v2, attr_length_);
-    return DataType::type_instance(attr_type_)->compare(left, right);
+    for (size_t i = 0; i < attr_length_.size(); i++) {
+      Value leftValue;
+      leftValue.set_type(attr_type_[i]);
+      leftValue.set_data(v1, attr_length_[i]);
+      v1 += attr_length_[i];
+
+      Value rightValue;
+      rightValue.set_type(attr_type_[i]);
+      rightValue.set_data(v2, attr_length_[i]);
+      v2 += attr_length_[i];
+
+      int ret = DataType::type_instance(attr_type_[i])->compare(leftValue, rightValue);
+      if (ret != 0) {
+        return ret;
+      }
+    }
+    return 0;
+
+//    Value left;
+//    left.set_type(attr_type_);
+//    left.set_data(v1, attr_length_);
+//    Value right;
+//    right.set_type(attr_type_);
+//    right.set_data(v2, attr_length_);
+//    return DataType::type_instance(attr_type_)->compare(left, right);
+  }
+
+  int operator()(vector<Value> &v1, vector<Value> &v2) const
+  {
+    // TODO: optimized the comparison
+    for (size_t i = 0; i < attr_length_.size(); i++) {
+      Value leftValue;
+      leftValue.set_type(attr_type_[i]);
+      leftValue.set_data(v1[i].data(), attr_length_[i]);
+
+      Value rightValue;
+      rightValue.set_type(attr_type_[i]);
+      rightValue.set_data(v2[i].data(), attr_length_[i]);
+
+      int ret = DataType::type_instance(attr_type_[i])->compare(leftValue, rightValue);
+      if (ret != 0) {
+        return ret;
+      }
+    }
+    return 0;
+
+//    Value left;
+//    left.set_type(attr_type_);
+//    left.set_data(v1, attr_length_);
+//    Value right;
+//    right.set_type(attr_type_);
+//    right.set_data(v2, attr_length_);
+//    return DataType::type_instance(attr_type_)->compare(left, right);
   }
 
 private:
-  AttrType attr_type_;
-  int      attr_length_;
+  vector<AttrType> attr_type_;
+  vector<int>     attr_length_;
 };
 
 /**
@@ -89,7 +142,7 @@ private:
 class KeyComparator
 {
 public:
-  void init(AttrType type, int length) { attr_comparator_.init(type, length); }
+  void init(vector<AttrType> type, vector<int> length) { attr_comparator_.init(type, length); }
 
   const AttrComparator &attr_comparator() const { return attr_comparator_; }
 
@@ -116,23 +169,40 @@ private:
 class AttrPrinter
 {
 public:
-  void init(AttrType type, int length)
+  void init(vector<AttrType> type, vector<int> length)
   {
     attr_type_   = type;
     attr_length_ = length;
   }
 
-  int attr_length() const { return attr_length_; }
+  int attr_length() const {
+    int res = 0;
+    for (size_t i = 0; i < attr_length_.size(); i++) {
+      res += attr_length_[i];
+    }
+    return res;
+  }
 
   string operator()(const char *v) const
   {
-    Value value(attr_type_, const_cast<char *>(v), attr_length_);
-    return value.to_string();
+    string res;
+    int offset = 0;
+    for (size_t i = 0; i < attr_length_.size(); i++) {
+      Value value(attr_type_[i], const_cast<char *>(v) + offset, attr_length_[i]);
+      offset += attr_length_[i];
+      res += value.to_string();
+      if (i != attr_length_.size()-1) {
+        res += ',';
+      }
+    }
+    return res;
+//    Value value(attr_type_, const_cast<char *>(v), attr_length_);
+//    return value.to_string();
   }
 
 private:
-  AttrType attr_type_;
-  int      attr_length_;
+  vector<AttrType> attr_type_; // 列类型数组
+  vector<int>      attr_length_; // 列宽度数组
 };
 
 /**
@@ -142,7 +212,7 @@ private:
 class KeyPrinter
 {
 public:
-  void init(AttrType type, int length) { attr_printer_.init(type, length); }
+  void init(vector<AttrType> type, vector<int> length) { attr_printer_.init(type, length); }
 
   const AttrPrinter &attr_printer() const { return attr_printer_; }
 
@@ -168,31 +238,58 @@ private:
  */
 struct IndexFileHeader
 {
+public:
   IndexFileHeader()
   {
     memset(this, 0, sizeof(IndexFileHeader));
-    root_page = BP_INVALID_PAGE_NUM;
   }
+
+
   PageNum  root_page;          ///< 根节点在磁盘中的页号
   int32_t  internal_max_size;  ///< 内部节点最大的键值对数
   int32_t  leaf_max_size;      ///< 叶子节点最大的键值对数
-  vector<int32_t> attr_length;        ///< 键值的长度
-  int32_t  key_length;         ///< attr length + sizeof(RID)
-  vector<AttrType> attr_type;          ///< 键值的类型
+  uint32_t attr_length[100];        ///< 键值的长度             键长度列表
+  int32_t  key_length;         ///< attr length + sizeof(RID)   key 长度，键长度和 加上 rid长度
+  AttrType attr_type[100];          ///< 键值的类型            键类型列表
+  int32_t attr_num_;
 
   const string to_string() const
   {
     stringstream ss;
 
-    ss << "attr_length:" << attr_length << ","
+    string attr_length_str;
+    for (int32_t i = 0; i < attr_num_; i++) {
+      attr_length_str += attr_length[i];
+      if (i != attr_num_-1) {
+        attr_length_str += '-';
+      }
+    }
+    string attr_type_str;
+    for (int32_t i = 0; i < attr_num_; i++) {
+      attr_length_str += attr_type_to_string(attr_type[i]);
+      if (i != attr_num_-1) {
+        attr_length_str += '-';
+      }
+    }
+
+    ss << "attr_length:" << attr_length_str << ","
        << "key_length:" << key_length << ","
-       << "attr_type:" << attr_type_to_string(attr_type) << ","
+       << "attr_type:" << attr_type_str << ","
        << "root_page:" << root_page << ","
        << "internal_max_size:" << internal_max_size << ","
        << "leaf_max_size:" << leaf_max_size << ";";
 
     return ss.str();
   }
+
+  int get_attr_length() {
+    int ret = 0;
+    for (int32_t i = 0; i < attr_num_; i++) {
+      ret += attr_length[i];
+    }
+    return ret;
+  }
+
 };
 
 /**
@@ -484,14 +581,14 @@ public:
    * 即向索引中插入一个值为（user_key，rid）的键值对
    * @note 这里假设user_key的内存大小与attr_length 一致
    */
-  RC insert_entry(const char *user_key, vector<FieldMeta*> &field_metas, const RID *rid);
+  RC insert_entry(vector<DataWrapper> &datas, const RID *rid);
 
   /**
    * @brief 从IndexHandle句柄对应的索引中删除一个值为（user_key，rid）的索引项
    * @return RECORD_INVALID_KEY 指定值不存在
    * @note 这里假设user_key的内存大小与attr_length 一致
    */
-  RC delete_entry(const char *user_key, const RID *rid);
+  RC delete_entry(vector<DataWrapper> &user_key, const RID *rid);
 
   bool is_empty() const;
 
@@ -500,7 +597,7 @@ public:
    * @param key_len user_key的长度
    * @param rid  返回值，记录记录所在的页面号和slot
    */
-  RC get_entry(const char *user_key, int key_len, list<RID> &rids);
+  RC get_entry(vector<Value> &user_key, list<RID> &rids);
 
   RC sync();
 
@@ -633,7 +730,7 @@ protected:
   RC adjust_root(BplusTreeMiniTransaction &mtr, Frame *root_frame);
 
 private:
-  common::MemPoolItem::item_unique_ptr make_key(const char *user_key, vector<FieldMeta*> &field_metas, const RID &rid);
+  common::MemPoolItem::item_unique_ptr make_key(vector<DataWrapper> &user_key, const RID &rid);
 
 protected:
   LogHandler     *log_handler_      = nullptr;  /// 日志处理器
@@ -675,8 +772,7 @@ public:
    * @param right_inclusive 右边界的值是否包含在内
    * TODO 重构参数表示方法
    */
-  RC open(const char *left_user_key, int left_len, bool left_inclusive, const char *right_user_key, int right_len,
-      bool right_inclusive);
+  RC open(vector<Value> &left_user_key, bool left_inclusive, vector<Value> &right_user_key,bool right_inclusive);
 
   /**
    * @brief 获取下一条记录
@@ -699,7 +795,7 @@ private:
   /**
    * 如果key的类型是CHARS, 扩展或缩减user_key的大小刚好是schema中定义的大小
    */
-  RC fix_user_key(const char *user_key, int key_len, bool want_greater, char **fixed_key, bool *should_inclusive);
+  RC fix_user_key(const char *user_key, int key_len, int colIdx,  bool want_greater, char **fixed_key, bool *should_inclusive);
 
   void fetch_item(RID &rid);
 

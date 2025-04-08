@@ -190,23 +190,28 @@ RC Table::open(Db *db, const char *meta_file, const char *base_dir)
     // don't need to remove the data_file
     return rc;
   }
-
+  // 多个索引
   const int index_num = table_meta_.index_num();
   for (int i = 0; i < index_num; i++) {
-    const IndexMeta *index_meta = table_meta_.index(i);
-    const FieldMeta *field_meta = table_meta_.field(index_meta->field());
-    if (field_meta == nullptr) {
-      LOG_ERROR("Found invalid index meta info which has a non-exists field. table=%s, index=%s, field=%s",
-                name(), index_meta->name(), index_meta->field());
-      // skip cleanup
-      //  do all cleanup action in destructive Table function
-      return RC::INTERNAL;
+    vector<FieldMeta*> field_metas;
+    IndexMeta *index_meta = const_cast<IndexMeta *>(table_meta_.index(i));
+    for (auto &field_meta : index_meta->getFieldMetas()) {
+      field_metas.push_back((FieldMeta*)(&field_meta));
+//      const FieldMeta *field_meta = table_meta_.field(field_meta);
     }
+//    const FieldMeta *field_meta = table_meta_.field(index_meta->field());
+//    if (field_meta == nullptr) {
+//      LOG_ERROR("Found invalid index meta info which has a non-exists field. table=%s, index=%s, field=%s",
+//                name(), index_meta->name(), index_meta->field());
+//      // skip cleanup
+//      //  do all cleanup action in destructive Table function
+//      return RC::INTERNAL;
+//    }
 
     BplusTreeIndex *index      = new BplusTreeIndex();
     string          index_file = table_index_file(base_dir, name(), index_meta->name());
 
-    rc = index->open(this, index_file.c_str(), *index_meta, *field_meta);
+    rc = index->open(this, index_file.c_str(), *index_meta, field_metas);
     if (rc != RC::SUCCESS) {
       delete index;
       LOG_ERROR("Failed to open index. table=%s, index=%s, file=%s, rc=%s",
@@ -397,7 +402,7 @@ RC Table::get_chunk_scanner(ChunkFileScanner &scanner, Trx *trx, ReadWriteMode m
   return rc;
 }
 
-RC Table::create_index(Trx *trx, vector<FieldMeta*> &field_metas, const char *index_name)
+RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const char *index_name)
 {
   if (common::is_blank(index_name) || field_metas.empty()) {
     LOG_INFO("Invalid input arguments, table name is %s, index_name is blank or attribute_name is blank", name());
@@ -414,7 +419,7 @@ RC Table::create_index(Trx *trx, vector<FieldMeta*> &field_metas, const char *in
       field_meta_name += fm->name();
     }
     LOG_INFO("Failed to init IndexMeta in table:%s, index_name:%s, field_name:%s", 
-             name(), index_name, field_meta_name);
+             name(), index_name, field_meta_name.c_str());
     return rc;
   }
 
@@ -545,12 +550,17 @@ RC Table::update_record(const Record &record)
 	RC rc = RC::SUCCESS;
 
 	// 删除索引
-	for (Index *index : indexes_) {
-		rc = index->delete_entry(record.data(), &record.rid());
-		ASSERT(RC::SUCCESS == rc,
-		       "failed to delete entry from index. table name=%s, index name=%s, rid=%s, rc=%s",
-		       name(), index->index_meta().name(), record.rid().to_string().c_str(), strrc(rc));
-	}
+  RC rc2 = delete_entry_of_indexes(record.data(), record.rid(), false /*error_on_not_exists*/);
+  if (rc2 != RC::SUCCESS) {
+    LOG_ERROR("Failed to rollback index data when insert index entries failed. table name=%s, rc=%d:%s",
+              name(), rc2, strrc(rc2));
+  }
+//	for (Index *index : indexes_) {
+//		rc = index->delete_entry(record.data(), &record.rid());
+//		ASSERT(RC::SUCCESS == rc,
+//		       "failed to delete entry from index. table name=%s, index name=%s, rid=%s, rc=%s",
+//		       name(), index->index_meta().name(), record.rid().to_string().c_str(), strrc(rc));
+//	}
 
 	// 插入索引
 	rc = insert_entry_of_indexes(record.data(), record.rid());
@@ -609,6 +619,16 @@ Index *Table::find_index(const char *index_name) const
   return nullptr;
 }
 Index *Table::find_index_by_field(const char *field_name) const
+{
+  const TableMeta &table_meta = this->table_meta();
+  const IndexMeta *index_meta = table_meta.find_index_by_field(field_name);
+  if (index_meta != nullptr) {
+    return this->find_index(index_meta->name());
+  }
+  return nullptr;
+}
+
+Index *Table::find_index_by_field(vector<const char*> field_name) const
 {
   const TableMeta &table_meta = this->table_meta();
   const IndexMeta *index_meta = table_meta.find_index_by_field(field_name);

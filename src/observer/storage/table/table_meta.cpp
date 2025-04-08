@@ -165,6 +165,31 @@ const IndexMeta *TableMeta::find_index_by_field(const char *field) const
   return nullptr;
 }
 
+const IndexMeta *TableMeta::find_index_by_field(vector<const char*> field_name) const
+{
+  // 遍历每个 index
+  for (const IndexMeta &index : indexes_) {
+    const vector<FieldMeta> &fieldMetas = index.getFieldMetas();
+    // 判断这个index 的列是否匹配
+    if (fieldMetas.size() != field_name.size()) {
+      continue;
+    }
+    // 校验所有列，是否都匹配
+    size_t i = 0;
+    for(i = 0; i < fieldMetas.size(); i++) {
+      FieldMeta &fm = const_cast<FieldMeta &>(fieldMetas[i]);
+      if (0 != strcmp(fm.name(), field_name[i])) {
+        break;
+      }
+    }
+    // 如果遍历了所有列，列名和索引的列名都匹配， 则匹配这个索引，则找到了这个index
+    if (i == fieldMetas.size()) {
+      return &index;
+    }
+  }
+  return nullptr;
+}
+
 const IndexMeta *TableMeta::index(int i) const { return &indexes_[i]; }
 
 int TableMeta::index_num() const { return indexes_.size(); }

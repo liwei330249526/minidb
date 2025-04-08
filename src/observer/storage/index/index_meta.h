@@ -35,21 +35,26 @@ class IndexMeta
 public:
   IndexMeta() = default;
 
-  RC init(const char *name, vector<FieldMeta*> &field_metas);
+  RC init(const char *name, const vector<FieldMeta*> &field_metas);
   RC init(const char *name, vector<FieldMeta> &field_metas);
 
 public:
   const char *name() const;
+  // 列名字集合的字符串
   const char *field() const;
 
   void desc(ostream &os) const;
 
-public:
   void      to_json(Json::Value &json_value) const;
   static RC from_json(const TableMeta &table, const Json::Value &json_value, IndexMeta &index);
+  const vector<FieldMeta> &getFieldMetas() const;
+  void setFieldMetas(const vector<FieldMeta> &fieldMetas);
 
 protected:
   string name_;   // index's name   索引名字
-  vector<FieldMeta> field_metas_;  // 可以是多个列的名字， 这里不能是指针，需要时数据
-  vector<string> field_;  // field's name   可以是多个列的名字
+  mutable vector<FieldMeta> field_metas_; // FieldMeta 数组
+
+protected:
+    // 可以是多个列的名字， 这里不能是指针，需要时数据
+  string field_metas_str_;  // field's name   可以是多个列的名字, name1-name2-name3
 };

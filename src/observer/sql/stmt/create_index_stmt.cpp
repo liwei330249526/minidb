@@ -42,6 +42,7 @@ RC CreateIndexStmt::create(Db *db, const CreateIndexSqlNode &create_index, Stmt 
 
   // 构造 索引列 元数据数组
   vector<FieldMeta*> field_metas;
+  // 遍历每个列名，获取这个列, 加入到field_metas 数组
   for (auto &a_name : create_index.attribute_name) {
     FieldMeta *field_meta = const_cast<FieldMeta *>(table->table_meta().field(a_name.c_str()));
     if (nullptr == field_meta) {
