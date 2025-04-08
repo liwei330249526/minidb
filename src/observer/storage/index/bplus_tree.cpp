@@ -1928,11 +1928,10 @@ RC BplusTreeScanner::open(vector<Value> &left_user_key, bool left_inclusive, vec
     vector<DataWrapper> user_key;
     vector<char *> fix_user_key_to_release;
     for (size_t i = 0; i < left_user_key.size(); i++) {
-
       char *fixed_left_key = const_cast<char *>(left_user_key[i].data());
+      int left_len = left_user_key[i].length();
       if (tree_handler_.file_header_.attr_type[i] == AttrType::CHARS) {
 //        int left_len = tree_handler_.file_header_.attr_length[i];  这里是数据长度
-        int left_len = left_user_key[i].length();
         bool should_inclusive_after_fix = false;
         rc = fix_user_key(left_user_key[i].data(), left_len, i, true /*greater*/, &fixed_left_key, &should_inclusive_after_fix);
         if (OB_FAIL(rc)) {
@@ -1943,15 +1942,15 @@ RC BplusTreeScanner::open(vector<Value> &left_user_key, bool left_inclusive, vec
         if (should_inclusive_after_fix) {
           left_inclusive = true;
         }
-        user_key.push_back(DataWrapper{fixed_left_key, left_len});
 
-        // 即将释放的内存
+        // 即将释放的内存, 内部申请的动态内存，需要及时释放
         if (fixed_left_key != left_user_key[i].data()) {
           fix_user_key_to_release.push_back(fixed_left_key);
 //          delete[] fixed_left_key;
 //          fixed_left_key = nullptr;
         }
       }
+      user_key.push_back(DataWrapper{fixed_left_key, left_len});
     }
 //    char *fixed_left_key = const_cast<char *>(left_user_key);
 //    // 如果key 是char
@@ -2030,9 +2029,9 @@ RC BplusTreeScanner::open(vector<Value> &left_user_key, bool left_inclusive, vec
     vector<char *> fix_user_key_to_release;
     for (size_t i = 0; i < left_user_key.size(); i++) {
       char *fixed_right_key = const_cast<char *>(right_user_key[i].data());
+      int right_len = right_user_key[i].length();
       if (tree_handler_.file_header_.attr_type[i] == AttrType::CHARS) {
 //        int left_len = tree_handler_.file_header_.attr_length[i];  这里是数据长度
-        int right_len = right_user_key[i].length();
         bool should_inclusive_after_fix = false;
         rc = fix_user_key(right_user_key[i].data(), right_len, i, true /*greater*/, &fixed_right_key, &should_inclusive_after_fix);
         if (OB_FAIL(rc)) {
@@ -2043,13 +2042,13 @@ RC BplusTreeScanner::open(vector<Value> &left_user_key, bool left_inclusive, vec
         if (should_inclusive_after_fix) {
           right_inclusive = true;
         }
-        user_key.push_back(DataWrapper{fixed_right_key, right_len});
 
         // 即将释放的内存
         if (fixed_right_key != left_user_key[i].data()) {
           fix_user_key_to_release.push_back(fixed_right_key);
         }
       }
+      user_key.push_back(DataWrapper{fixed_right_key, right_len});
     }
 //    char *fixed_right_key          = const_cast<char *>(right_user_key);
 //    bool  should_include_after_fix = false;
