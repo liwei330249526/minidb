@@ -74,7 +74,20 @@ RC UpdatePhysicalOperator::open(Trx *trx)
 				copy_len = data_len + 1;
 			}
 		}
-		newRecord.set_field(field->offset(), copy_len, const_cast<char *>(value_.data()));
+		if (value_.attr_type() != field->type()) {
+      Value real_value; // 是一个局部变量，局部变量自动析构
+      // 类型不同，则尝试类型转换，将新值保存在 real_value
+      rc = Value::cast_to(value_, field->type(), real_value);
+      if (OB_FAIL(rc)) {
+        LOG_WARN("failed to cast value. table name:%s,field name:%s,value:%s ",
+                 table_->name(), field->name(), value_.to_string().c_str());
+        return rc;
+      }
+      // 解bug， 类型不同，需要转化； bug实例： UPDATE multi_index3 SET col4='2025-02-01' where id=2;  的字符串需要转化为 date类型
+      newRecord.set_field(field->offset(), copy_len, const_cast<char *>(real_value.data()));
+		} else {
+      newRecord.set_field(field->offset(), copy_len, const_cast<char *>(value_.data()));
+		}
 		// 写入记录
 		rc = trx_->update_record(table_, newRecord);
 		if (rc != RC::SUCCESS) {

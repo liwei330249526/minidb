@@ -122,7 +122,9 @@ private:
 
 public:
   Index *find_index(const char *index_name) const;
+  // 通过 field_name 找索引
   Index *find_index_by_field(const char *field_name) const;
+  // 通过 field_name 集合找索引
   Index *find_index_by_field(vector<const char*> field_name) const;
 
 private:
