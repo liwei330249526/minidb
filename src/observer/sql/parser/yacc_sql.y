@@ -74,6 +74,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         INDEX
         CALC
         SELECT
+        ORDER  // 排序关键字
+        ASC  // 排序方向
         DESC
         SHOW
         SYNC
@@ -132,6 +134,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         IN
         EXISTS
 
+
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {   // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
@@ -149,6 +152,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   std::vector<ConditionSqlNode> *            condition_list;
   std::vector<RelAttrSqlNode> *              rel_attr_list;
   std::vector<std::string> *                 relation_list;
+  bool                                       bool_u;
   char *                                     string;
   int                                        number;
   float                                      floats;
@@ -157,6 +161,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
   ValueListExpr *                            valuelist_expr;  // 新增
   std::vector<std::string>*                  string_list;
+  std::vector<std::pair<RelAttrSqlNode, bool>> *     order_by_item_list_t;
+  std::pair<RelAttrSqlNode, bool> *     order_by_item_t;
 }
 
 %token <number> NUMBER    // 整数
@@ -172,7 +178,6 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <number>              number
 %type <string>              relation
 %type <comp>                comp_op
-// %type <comp>                sub_query_comp_op
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -186,13 +191,18 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <expression_list>     group_by
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
+%type <string>              ASC
+%type <string>              DESC
+%type <bool_u>              sort_direction  // 排序方向
+%type <order_by_item_t>     order_by_item  // 排序 item
+%type <order_by_item_list_t>     order_by_item_list  // 排序 item list
+%type <order_by_item_list_t>     order_by_clause  // 排序 item list 语句
 %type <join_node>           join_relation  // %type 将具体的符号与 %union 中的某个成员类型关联起来。
 %type <join_node_list>      join_list      // join 链表
 %type <vector_function_expr> vector_function  // 定义 vector_function_expr 类型
 %type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
 %type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
 %type <valuelist_expr>      valuelist_expr_y // valueslists
-
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -552,7 +562,7 @@ update_stmt:      /*  update 语句的语法解析树*/
     }
     ;
 select_stmt:        /*  select 语句的语法解析树*/
-//    SELECT expression_list FROM rel_list where group_by
+//    SELECT expression_list FROM rel_list where group_by order_by_clause
 //    {
 //      $$ = new ParsedSqlNode(SCF_SELECT);
 //      if ($2 != nullptr) {
@@ -576,7 +586,7 @@ select_stmt:        /*  select 语句的语法解析树*/
 //      }
 //    }
 //   | 
-    SELECT expression_list FROM rel_list join_list where group_by
+    SELECT expression_list FROM rel_list join_list where group_by order_by_clause
     {
      // 支持 join
      $$ = new ParsedSqlNode(SCF_SELECT);
@@ -610,6 +620,11 @@ select_stmt:        /*  select 语句的语法解析树*/
      if ($7 != nullptr) {
        $$->selection.group_by.swap(*$7);
        delete $7;
+     }
+
+     if ($8 != nullptr) {
+       $$->selection.order_by = std::move(*$8);
+       delete $8;
      }
    }
     ;
@@ -780,7 +795,7 @@ vector_function:
 //    }
 //    ;
 
-rel_attr:
+rel_attr:        // 列
     ID {
       $$ = new RelAttrSqlNode;
       $$->attribute_name = $1;
@@ -933,6 +948,64 @@ group_by:
       $$ = nullptr;
     }
     ;
+
+order_by_clause:
+    /* empty */
+    {
+        $$ = nullptr;
+    }
+    | ORDER BY order_by_item_list
+    {
+        std::reverse($3->begin(), $3->end());  // 顺序调整
+        $$ = $3;
+    }
+    ;
+order_by_item_list:
+    order_by_item
+    {
+        $$ = new std::vector<std::pair<RelAttrSqlNode, bool>>;
+        $$->emplace_back(*$1);
+        delete $1;
+    }
+    | order_by_item COMMA order_by_item_list
+    {
+        if ($3 != nullptr) {
+            $$ = $3;
+        } else {
+            $$ = new std::vector<std::pair<RelAttrSqlNode, bool>>;
+        }
+        $$->emplace_back(*$1);
+        delete $1;
+    }
+    ;
+
+order_by_item:
+    rel_attr sort_direction
+    {
+        auto *attr = $1;
+        // std::string attr_name = attr->relation_name.empty()? attr->attribute_name : attr->relation_name + "." + attr->attribute_name;
+        //std::string direction = $2;
+        //bool asc = (direction == "ASC") || (direction == "asc") || (direction == "0"); // $2 为0 表示默认升序
+        $$ = new std::pair<RelAttrSqlNode, bool>(*attr, $2);
+        delete $1;
+    }
+    ;
+
+sort_direction:  // sort 方向
+    /* empty */
+    {
+        $$ = true;
+    }
+    | ASC
+    {
+        $$ = true;
+    }
+    | DESC
+    {
+        $$ = false;
+    }
+    ;
+
 load_data_stmt:
     LOAD DATA INFILE SSS INTO TABLE ID 
     {

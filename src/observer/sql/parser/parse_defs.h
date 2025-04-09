@@ -117,6 +117,7 @@ struct SelectSqlNode
   std::vector<JoinRelationNode>            join_relations; // join 表达式   如果有join， 则relations作为主表，只有1个
   std::vector<ConditionSqlNode>            conditions;   ///< 查询条件，使用AND串联起来多个条件
   std::vector<std::unique_ptr<Expression>> group_by;     ///< group by clause
+  std::vector<std::pair<RelAttrSqlNode, bool>> order_by;    // order by
 };
 
 /**
