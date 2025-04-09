@@ -30,6 +30,13 @@ class Table;
  * @brief 表示select语句
  * @ingroup Statement
  */
+
+struct OrderByStmt_t {
+    std::vector<std::unique_ptr<Expression>> group_by_;
+    std::vector<bool> dirs_; // true 升序， false 降序
+};
+
+
 class SelectStmt : public Stmt
 {
 public:
@@ -48,11 +55,14 @@ public:
 
   std::vector<std::unique_ptr<Expression>> &query_expressions() { return query_expressions_; }
   std::vector<std::unique_ptr<Expression>> &group_by() { return group_by_; }
+  unique_ptr<OrderByStmt_t> &getOrderByStmt();
 
+  void setOrderByStmt(unique_ptr<OrderByStmt_t> &orderByStmt);
 private:
   std::vector<std::unique_ptr<Expression>> query_expressions_;
   std::vector<Table *>                     tables_;
   FilterStmt                              *filter_stmt_ = nullptr;
   std::vector<std::unique_ptr<Expression>> group_by_;
   SelectStmt* sub_sel_; // 子查询
+  unique_ptr<OrderByStmt_t> order_by_stmt_;
 };

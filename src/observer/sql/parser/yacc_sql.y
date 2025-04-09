@@ -161,8 +161,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
   ValueListExpr *                            valuelist_expr;  // 新增
   std::vector<std::string>*                  string_list;
-  std::vector<std::pair<RelAttrSqlNode, bool>> *     order_by_item_list_t;
-  std::pair<RelAttrSqlNode, bool> *     order_by_item_t;
+  std::vector<std::pair<Expression*, bool>> *     order_by_item_list_t;
+  std::pair<Expression*, bool> *     order_by_item_t;
 }
 
 %token <number> NUMBER    // 整数
@@ -623,7 +623,8 @@ select_stmt:        /*  select 语句的语法解析树*/
      }
 
      if ($8 != nullptr) {
-       $$->selection.order_by = std::move(*$8);
+       // $$->selection.order_by = std::move(*$8);
+       $$->selection.order_by.swap(*$8);
        delete $8;
      }
    }
@@ -795,7 +796,7 @@ vector_function:
 //    }
 //    ;
 
-rel_attr:        // 列
+rel_attr:        // 列, 只有一个 id，表示列, 例如 col1; 有 id.id, 表示表加列名，例如 t1.col1
     ID {
       $$ = new RelAttrSqlNode;
       $$->attribute_name = $1;
@@ -961,33 +962,44 @@ order_by_clause:
     }
     ;
 order_by_item_list:
-    order_by_item
+    order_by_item                  // 返回 vector<pair>
     {
-        $$ = new std::vector<std::pair<RelAttrSqlNode, bool>>;
+        $$ = new std::vector<std::pair<Expression*, bool>>;
         $$->emplace_back(*$1);
         delete $1;
     }
-    | order_by_item COMMA order_by_item_list
+    | order_by_item COMMA order_by_item_list          // 返回 vector<pair>
     {
         if ($3 != nullptr) {
             $$ = $3;
         } else {
-            $$ = new std::vector<std::pair<RelAttrSqlNode, bool>>;
+            $$ = new std::vector<std::pair<Expression*, bool>>;
         }
         $$->emplace_back(*$1);
         delete $1;
     }
     ;
 
-order_by_item:
-    rel_attr sort_direction
+// order_by_item:                改为 expression
+//     rel_attr sort_direction
+//     {
+//         auto *attr = $1;
+//         // std::string attr_name = attr->relation_name.empty()? attr->attribute_name : attr->relation_name + "." + attr->attribute_name;
+//         //std::string direction = $2;
+//         //bool asc = (direction == "ASC") || (direction == "asc") || (direction == "0"); // $2 为0 表示默认升序
+//         $$ = new std::pair<RelAttrSqlNode, bool>(*attr, $2);
+//         delete $1;
+//     }
+//     ;
+order_by_item:                        // 返回 pair
+    expression sort_direction
     {
-        auto *attr = $1;
+        // auto *attr = $1;
         // std::string attr_name = attr->relation_name.empty()? attr->attribute_name : attr->relation_name + "." + attr->attribute_name;
         //std::string direction = $2;
         //bool asc = (direction == "ASC") || (direction == "asc") || (direction == "0"); // $2 为0 表示默认升序
-        $$ = new std::pair<RelAttrSqlNode, bool>(*attr, $2);
-        delete $1;
+        $$ = new std::pair<Expression*, bool>($1, $2);
+        // delete $1;  不能delete
     }
     ;
 

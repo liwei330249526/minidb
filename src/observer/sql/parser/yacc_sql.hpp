@@ -162,8 +162,8 @@ union YYSTYPE
   SubqueryExpr *                             subquery_expr;  // 新增：子查询表达式
   ValueListExpr *                            valuelist_expr;  // 新增
   std::vector<std::string>*                  string_list;
-  std::vector<std::pair<RelAttrSqlNode, bool>> *     order_by_item_list_t;
-  std::pair<RelAttrSqlNode, bool> *     order_by_item_t;
+  std::vector<std::pair<Expression*, bool>> *     order_by_item_list_t;
+  std::pair<Expression*, bool> *     order_by_item_t;
 
 #line 169 "yacc_sql.hpp"
 

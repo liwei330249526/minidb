@@ -40,6 +40,8 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/expression_iterator.h"
 #include "sql/operator/array_physical_operator.h"
+#include "sql/operator/order_by_logical_operator.h"
+#include "sql/stmt/select_stmt.h"
 
 using namespace std;
 using namespace common;
@@ -252,7 +254,18 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     last_oper = &group_by_oper;
   }
 
-  //
+  // order by 算子
+  unique_ptr<OrderByStmt_t> &order_by_stmt = select_stmt->getOrderByStmt();
+  unique_ptr<LogicalOperator> order_by_oper = make_unique<OrderByLogicalOperator>(order_by_stmt);
+  if (order_by_oper) {
+    if (*last_oper) {
+      order_by_oper->add_child(std::move(*last_oper));
+    }
+
+    last_oper = &order_by_oper;
+  }
+
+
   // project_oper  <- group_by_oper   <-  predicate <- scan
   auto project_oper = make_unique<ProjectLogicalOperator>(std::move(select_stmt->query_expressions()));
   if (*last_oper) {

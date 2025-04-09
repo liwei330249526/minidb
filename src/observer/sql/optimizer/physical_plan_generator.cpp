@@ -102,6 +102,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
       return create_plan(static_cast<ArrGetLogicalOperator &>(logical_operator), oper);
     } break;
 
+    case LogicalOperatorType::ORDER_BY: {
+      // todo 实现排序物理算子
+      return create_plan(static_cast<ArrGetLogicalOperator &>(logical_operator), oper);
+    } break;
     default: {
       ASSERT(false, "unknown logical operator type");
       return RC::INVALID_ARGUMENT;

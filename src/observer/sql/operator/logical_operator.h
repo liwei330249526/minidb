@@ -44,6 +44,7 @@ enum class LogicalOperatorType
   EXPLAIN,     ///< 查看执行计划
   GROUP_BY,    ///< 分组
   ARR_GET,    ///< 数组算子
+  ORDER_BY   // 排序
 };
 
 /**

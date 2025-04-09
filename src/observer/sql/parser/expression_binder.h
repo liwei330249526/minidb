@@ -41,6 +41,7 @@ public:
   }
 
 private:
+    // bind 上下文，哪个库，哪个表
   std::vector<Table *> query_tables_;
   Db *db_;
 };

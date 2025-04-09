@@ -49,6 +49,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   SelectStmt *select_stmt = new SelectStmt();
 
   // collect tables in `from` statement
+  // 收集表
   vector<Table *>                tables;
   unordered_map<string, Table *> table_map;
   for (size_t i = 0; i < select_sql.relations.size(); i++) {
@@ -115,6 +116,17 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     return rc;
   }
 
+  // 绑定order by
+  OrderByStmt_t *order_by_stmt = new OrderByStmt_t();
+  for (auto &it : select_sql.order_by) {
+    unique_ptr<Expression> order_expr(it.first);
+    rc = expression_binder.bind_expression(order_expr, order_by_stmt->group_by_);
+    if (OB_FAIL(rc)) {
+      LOG_INFO("bind expression failed. rc=%s", strrc(rc));
+      return rc;
+    }
+    order_by_stmt->dirs_.push_back(it.second);
+  }
 
   // everything alright
 //  SelectStmt *select_stmt = new SelectStmt();
@@ -123,6 +135,8 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->query_expressions_.swap(bound_expressions); // 替换未绑定的表达式
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->group_by_.swap(group_by_expressions);
+  unique_ptr<OrderByStmt_t> order_by_stmt_uniq(order_by_stmt) ;
+  select_stmt->order_by_stmt_ = std::move(order_by_stmt_uniq);
   stmt                      = select_stmt;
   return RC::SUCCESS;
 }
@@ -140,4 +154,11 @@ std::vector<Table *> SelectStmt::all_tables() const {
     }
   }
   return res;
+}
+ unique_ptr<OrderByStmt_t> &SelectStmt::getOrderByStmt() {
+  return order_by_stmt_;
+}
+
+void SelectStmt::setOrderByStmt(unique_ptr<OrderByStmt_t> &orderByStmt) {
+  order_by_stmt_ = std::move(orderByStmt) ;
 }
