@@ -255,18 +255,20 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   }
 
   // order by 算子
+  // order by  <-  group_by_oper   <-  predicate <- scan
   unique_ptr<OrderByStmt_t> &order_by_stmt = select_stmt->getOrderByStmt();
-  unique_ptr<LogicalOperator> order_by_oper = make_unique<OrderByLogicalOperator>(order_by_stmt);
-  if (order_by_oper) {
-    if (*last_oper) {
-      order_by_oper->add_child(std::move(*last_oper));
+  unique_ptr<LogicalOperator> order_by_oper;
+  if (order_by_stmt != nullptr) {
+    order_by_oper = make_unique<OrderByLogicalOperator>(order_by_stmt);
+    if (order_by_oper) {
+      if (*last_oper) {
+        order_by_oper->add_child(std::move(*last_oper));
+      }
+      last_oper = &order_by_oper;
     }
-
-    last_oper = &order_by_oper;
   }
 
-
-  // project_oper  <- group_by_oper   <-  predicate <- scan
+  // project_oper  <- order by  <-  group_by_oper   <-  predicate <- scan
   auto project_oper = make_unique<ProjectLogicalOperator>(std::move(select_stmt->query_expressions()));
   if (*last_oper) {
     project_oper->add_child(std::move(*last_oper));

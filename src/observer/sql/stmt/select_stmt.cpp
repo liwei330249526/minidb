@@ -117,8 +117,11 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   }
 
   // 绑定order by
-  OrderByStmt_t *order_by_stmt = new OrderByStmt_t();
+  OrderByStmt_t *order_by_stmt = nullptr;
   for (auto &it : select_sql.order_by) {
+    if (order_by_stmt == nullptr) {
+      order_by_stmt = new OrderByStmt_t();
+    }
     unique_ptr<Expression> order_expr(it.first);
     rc = expression_binder.bind_expression(order_expr, order_by_stmt->group_by_);
     if (OB_FAIL(rc)) {
@@ -135,8 +138,10 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->query_expressions_.swap(bound_expressions); // 替换未绑定的表达式
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->group_by_.swap(group_by_expressions);
-  unique_ptr<OrderByStmt_t> order_by_stmt_uniq(order_by_stmt) ;
-  select_stmt->order_by_stmt_ = std::move(order_by_stmt_uniq);
+  if (order_by_stmt != nullptr) {
+    unique_ptr<OrderByStmt_t> order_by_stmt_uniq(order_by_stmt) ;
+    select_stmt->order_by_stmt_ = std::move(order_by_stmt_uniq);
+  }
   stmt                      = select_stmt;
   return RC::SUCCESS;
 }

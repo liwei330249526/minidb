@@ -15,6 +15,8 @@ See the Mulan PSL v2 for more details. */
 #include <utility>
 #include <src/observer/sql/operator/array_logical_operator.h>
 #include <src/observer/sql/operator/array_physical_operator.h>
+#include <src/observer/sql/operator/order_by_logical_operator.h>
+#include <src/observer/sql/operator/order_by_physicalOperator.h>
 
 #include "common/log/log.h"
 #include "sql/expr/expression.h"
@@ -47,6 +49,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/scalar_group_by_physical_operator.h"
 #include "sql/operator/table_scan_vec_physical_operator.h"
 #include "sql/optimizer/physical_plan_generator.h"
+#include "sql/stmt/select_stmt.h"
 
 using namespace std;
 
@@ -104,7 +107,7 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::ORDER_BY: {
       // todo 实现排序物理算子
-      return create_plan(static_cast<ArrGetLogicalOperator &>(logical_operator), oper);
+      return create_plan(static_cast<OrderByLogicalOperator &>(logical_operator), oper);
     } break;
     default: {
       ASSERT(false, "unknown logical operator type");
@@ -645,6 +648,34 @@ RC PhysicalPlanGenerator::create_sub_query_plan(unique_ptr<Expression> &exp) {
     }
   }
 
+  return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(OrderByLogicalOperator &order_oper, unique_ptr<PhysicalOperator> &oper) {
+  vector<unique_ptr<LogicalOperator>> &child_opers = order_oper.children();
+
+  unique_ptr<PhysicalOperator> child_phy_oper;
+
+  RC rc = RC::SUCCESS;
+  if (!child_opers.empty()) {
+    LogicalOperator *child_oper = child_opers.front().get();
+    // 构造投影的 儿子 算子
+    rc = create(*child_oper, child_phy_oper);
+    if (OB_FAIL(rc)) {
+      LOG_WARN("failed to create project logical operator's child physical operator. rc=%s", strrc(rc));
+      return rc;
+    }
+  }
+  // 投影算子的 子 是 get 算子; 投影逻辑算子的表达式复制给投影物理算子
+  auto order_operator = make_unique<OrderByPhysicalOperator>(std::move(order_oper.getOrderByStmt()));
+  if (child_phy_oper) {
+    // 将儿子物理算子设置给投影物理算子
+    order_operator->add_child(std::move(child_phy_oper));
+  }
+
+  oper = std::move(order_operator);
+
+  LOG_TRACE("create a project physical operator");
   return rc;
 }
 

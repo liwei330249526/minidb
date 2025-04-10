@@ -29,6 +29,7 @@ class JoinLogicalOperator;
 class CalcLogicalOperator;
 class GroupByLogicalOperator;
 class ArrGetLogicalOperator;
+class OrderByLogicalOperator;
 
 /**
  * @brief 物理计划生成器
@@ -63,4 +64,5 @@ private:
   RC create_vec_plan(ExplainLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
 
   RC create_sub_query_plan(unique_ptr<Expression> &exp);
+  RC create_plan(OrderByLogicalOperator &order_oper, std::unique_ptr<PhysicalOperator> &oper);
 };
