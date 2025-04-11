@@ -77,6 +77,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         ORDER  // 排序关键字
         ASC  // 排序方向
         DESC
+        LIMIT
         SHOW
         SYNC
         INSERT
@@ -193,6 +194,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <sql_node>            select_stmt
 %type <string>              ASC
 %type <string>              DESC
+%type <number>              LIMIT
+%type <number>              limit_clause
 %type <bool_u>              sort_direction  // 排序方向
 %type <order_by_item_t>     order_by_item  // 排序 item
 %type <order_by_item_list_t>     order_by_item_list  // 排序 item list
@@ -586,7 +589,7 @@ select_stmt:        /*  select 语句的语法解析树*/
 //      }
 //    }
 //   | 
-    SELECT expression_list FROM rel_list join_list where group_by order_by_clause
+    SELECT expression_list FROM rel_list join_list where group_by order_by_clause limit_clause
     {
      // 支持 join
      $$ = new ParsedSqlNode(SCF_SELECT);
@@ -627,6 +630,8 @@ select_stmt:        /*  select 语句的语法解析树*/
        $$->selection.order_by.swap(*$8);
        delete $8;
      }
+     // limit
+     $$->selection.limit = $9;
    }
     ;
  valuelist_expr_y:   // value list 表达式在 y文件
@@ -1015,6 +1020,17 @@ sort_direction:  // sort 方向
     | DESC
     {
         $$ = false;
+    }
+    ;
+
+limit_clause:
+    /* empty */
+    {
+      $$ = -1;
+    }
+    | LIMIT NUMBER
+    {
+      $$ = $2;
     }
     ;
 

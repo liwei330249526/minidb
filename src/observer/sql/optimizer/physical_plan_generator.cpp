@@ -340,7 +340,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
     }
   }
   // 投影算子的 子 是 get 算子; 投影逻辑算子的表达式复制给投影物理算子
-  auto project_operator = make_unique<ProjectPhysicalOperator>(std::move(project_oper.expressions()));
+  auto project_operator = make_unique<ProjectPhysicalOperator>(std::move(project_oper.expressions()), project_oper.limit_);
   if (child_phy_oper) {
     // 将儿子物理算子设置给投影物理算子
     project_operator->add_child(std::move(child_phy_oper));

@@ -25,6 +25,7 @@ class ProjectPhysicalOperator : public PhysicalOperator
 {
 public:
   ProjectPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions);
+  ProjectPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions, int limit);
 
   virtual ~ProjectPhysicalOperator() = default;
 
@@ -40,7 +41,13 @@ public:
 
   RC tuple_schema(TupleSchema &schema) const override;
 
+    int getLimit() const;
+
+    void setLimit(int limit);
+
 private:
-  std::vector<std::unique_ptr<Expression>>     expressions_;  // 投影算子的表达式，例如 select id+1 from exp_table;   id+1; left 是 filed ， right 是valu
+    std::vector<std::unique_ptr<Expression>>     expressions_;  // 投影算子的表达式，例如 select id+1 from exp_table;   id+1; left 是 filed ， right 是valu
   ExpressionTuple<std::unique_ptr<Expression>> tuple_; // 投影算子的 tuple
+  int limit_ = -1;
+  int count_ = 0;
 };

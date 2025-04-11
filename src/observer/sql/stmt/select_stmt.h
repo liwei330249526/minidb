@@ -66,4 +66,9 @@ private:
   std::vector<std::unique_ptr<Expression>> group_by_;
   SelectStmt* sub_sel_; // 子查询
   unique_ptr<OrderByStmt_t> order_by_stmt_;
+  int limit_ = -1;
+public:
+    int getLimit() const;
+
+    void setLimit(int limit);
 };

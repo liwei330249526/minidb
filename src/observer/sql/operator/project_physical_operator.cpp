@@ -24,6 +24,12 @@ ProjectPhysicalOperator::ProjectPhysicalOperator(vector<unique_ptr<Expression>> 
 {
 }
 
+ProjectPhysicalOperator::ProjectPhysicalOperator(vector<std::unique_ptr<Expression>> &&expressions, int limit)
+  : expressions_(std::move(expressions)), tuple_(expressions_), limit_(limit)
+{
+}
+
+
 RC ProjectPhysicalOperator::open(Trx *trx)
 {
   if (children_.empty()) {
@@ -42,9 +48,10 @@ RC ProjectPhysicalOperator::open(Trx *trx)
 // 调儿子的next
 RC ProjectPhysicalOperator::next()
 {
-  if (children_.empty()) {
+  if (children_.empty() || (limit_ >= 0 && count_ >= limit_)) {
     return RC::RECORD_EOF;
   }
+  count_++;
   return children_[0]->next();
 }
 
@@ -69,3 +76,12 @@ RC ProjectPhysicalOperator::tuple_schema(TupleSchema &schema) const
   }
   return RC::SUCCESS;
 }
+
+int ProjectPhysicalOperator::getLimit() const {
+  return limit_;
+}
+
+void ProjectPhysicalOperator::setLimit(int limit) {
+  limit_ = limit;
+}
+

@@ -142,6 +142,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt)
     unique_ptr<OrderByStmt_t> order_by_stmt_uniq(order_by_stmt) ;
     select_stmt->order_by_stmt_ = std::move(order_by_stmt_uniq);
   }
+  select_stmt->limit_ = select_sql.limit;
   stmt                      = select_stmt;
   return RC::SUCCESS;
 }
@@ -166,4 +167,12 @@ std::vector<Table *> SelectStmt::all_tables() const {
 
 void SelectStmt::setOrderByStmt(unique_ptr<OrderByStmt_t> &orderByStmt) {
   order_by_stmt_ = std::move(orderByStmt) ;
+}
+
+int SelectStmt::getLimit() const {
+  return limit_;
+}
+
+void SelectStmt::setLimit(int limit) {
+  limit_ = limit;
 }

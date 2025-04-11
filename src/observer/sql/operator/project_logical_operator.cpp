@@ -20,3 +20,8 @@ ProjectLogicalOperator::ProjectLogicalOperator(vector<unique_ptr<Expression>> &&
 {
   expressions_ = std::move(expressions);
 }
+
+ProjectLogicalOperator::ProjectLogicalOperator(vector<std::unique_ptr<Expression>> &&expressions, int limit) {
+  expressions_ = std::move(expressions);
+  limit_ = limit;
+}
