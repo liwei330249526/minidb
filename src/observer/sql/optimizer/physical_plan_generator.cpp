@@ -158,7 +158,9 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       if (comparison_expr->comp() != EQUAL_TO) {
         continue;
       }
-
+      // comparison_expr->comp()   > >=  < <=  ==
+      //                           l  l  r  r  lr
+      //                              in    in  in in
       unique_ptr<Expression> &left_expr  = comparison_expr->left();
       unique_ptr<Expression> &right_expr = comparison_expr->right();
       // 左右比较的一边最少是一个值
@@ -168,10 +170,12 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
 
       FieldExpr *field_expr = nullptr;
       if (left_expr->type() == ExprType::FIELD) {
+        // a > 2;  a >= 2 ;  a < 2 , a <= 2   ;
         ASSERT(right_expr->type() == ExprType::VALUE, "right expr should be a value expr while left is field expr");
         field_expr = static_cast<FieldExpr *>(left_expr.get());
         value_expr = static_cast<ValueExpr *>(right_expr.get());
       } else if (right_expr->type() == ExprType::FIELD) {
+        // 2 > a;   2 >= a ;  2 < a  , 2 <= a
         ASSERT(left_expr->type() == ExprType::VALUE, "left expr should be a value expr while right is a field expr");
         field_expr = static_cast<FieldExpr *>(right_expr.get());
         value_expr = static_cast<ValueExpr *>(left_expr.get());
@@ -183,6 +187,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       // 获取 field
       const Field &field = field_expr->field();
       names.push_back(field.field_name());
+      // 获取值
       values.push_back(value_expr->get_value());
       // 通过 field name 获取 index
 //      index              = table->find_index_by_field(field.field_name());
