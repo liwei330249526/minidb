@@ -742,7 +742,7 @@ protected:
   // 这个锁可以使用递归读写锁，但是这里偷懒先不改
   common::SharedMutex root_lock_;
 
-  KeyComparator key_comparator_;
+  KeyComparator key_comparator_; // key 比较器
   KeyPrinter    key_printer_;
 
   unique_ptr<common::MemPoolItem> mem_pool_item_;

@@ -36,6 +36,7 @@ RC BplusTreeIndex::create(Table *table, const char *file_name, const IndexMeta &
     field_meta_types.push_back(fm->type());
     field_meta_lens.push_back(fm->len());
   }
+  // 建索引，  。。。    bufferpool， 文件名，列类型列表，列长度列表，
   RC rc = index_handler_.create(table->db()->log_handler(), bpm, file_name, field_meta_types, field_meta_lens);
   if (RC::SUCCESS != rc) {
     LOG_WARN("Failed to create index_handler, file_name:%s, index:%s, field:%s, rc:%s",
@@ -101,7 +102,7 @@ RC BplusTreeIndex::close()
   LOG_INFO("Successfully close index.");
   return RC::SUCCESS;
 }
-
+// 行数据 -> 转换为 多列索引的列数据构造一个 key；  value 是数据位置
 RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
 {
   // 行数据，和数据位置 rid

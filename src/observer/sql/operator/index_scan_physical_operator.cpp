@@ -60,13 +60,14 @@ RC IndexScanPhysicalOperator::open(Trx *trx)
   trx_ = trx;
   return RC::SUCCESS;
 }
-
+// 索引 scan 物理计划
 RC IndexScanPhysicalOperator::next()
 {
   RID rid;
   RC  rc = RC::SUCCESS;
 
   bool filter_result = false;
+  // 索引扫描得到所有 rid ， 然后获取 rid 对应的 record
   while (RC::SUCCESS == (rc = index_scanner_->next_entry(&rid))) {
     rc = record_handler_->get_record(rid, current_record_);
     if (OB_FAIL(rc)) {

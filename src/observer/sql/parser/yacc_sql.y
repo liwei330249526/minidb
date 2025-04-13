@@ -652,7 +652,7 @@ select_stmt:        /*  select 语句的语法解析树*/
       }
 
      // 处理 JOIN 表
-     if ($5 != nullptr) {
+     if ($5 != nullptr) { // todo join_list 倒序
        for (const auto &join_relation : *$5) {
          $$->selection.relations.push_back(join_relation.right_table);  // join 表
          $$->selection.join_relations.push_back(join_relation); // join 表达式

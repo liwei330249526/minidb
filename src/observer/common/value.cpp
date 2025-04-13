@@ -157,6 +157,7 @@ void Value::set_data(char *data, int length)
       // select 的时候， 会走到这里date 数据转换为 Value
       float *start = (float *)data;
       float *end = start + length / sizeof(float);
+      // val(start, end) 是 std::vector 的一个构造函数调用，它会将从 start 指针指向的位置开始，到 end 指针指向的位置之前的所有 float 数据复制到 val 这个 std::vector 容器中。
       vector<float> val(start, end);
       set_vector(val);
     } break;
@@ -378,7 +379,7 @@ bool Value::get_boolean() const
   return false;
 }
 // 返回 vector 数据
-const vector<float> Value::get_vector() const {
+const vector<float> &Value::get_vector() const {
   if (attr_type_ == AttrType::VECTORS ) {
     return *value_.vector_value_;
   } else if(attr_type_ == AttrType::CHARS) {
@@ -388,7 +389,7 @@ const vector<float> Value::get_vector() const {
     return real_value.get_vector();
   }
   LOG_ERROR("unknown data type. type=%d", attr_type_);
-  return vector<float>();
+  throw std::runtime_error("unknown data type. type=" + std::to_string(static_cast<int>(attr_type_)));
 }
 
 
@@ -399,6 +400,7 @@ void Value::set_date(int y, int m, int d){
 }
 
 void Value::set_vector(vector<float> &val) {
+  // 先释放
   reset();
   attr_type_ = AttrType::VECTORS;
   value_.vector_value_ = new vector<float>(val);

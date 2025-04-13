@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 #include <vector>
 #include <span>
+#include <src/observer/storage/index/vector_index_meta.h>
 
 #include "common/lang/serializable.h"
 #include "common/rc.h"
@@ -42,6 +43,7 @@ public:
       std::span<const AttrInfoSqlNode> attributes, StorageFormat storage_format);
 
   RC add_index(const IndexMeta &index);
+  RC add_index(const VectorIndexMeta &index);
 
 public:
   int32_t             table_id() const { return table_id_; }
@@ -78,6 +80,7 @@ protected:
   std::vector<FieldMeta> trx_fields_; // 事务字段
   std::vector<FieldMeta> fields_;  // 包含sys_fields
   std::vector<IndexMeta> indexes_; // 索引
+  std::vector<VectorIndexMeta> vector_indexes_; // 索引
   StorageFormat          storage_format_;
 
   int record_size_ = 0; // 一个record 的长度

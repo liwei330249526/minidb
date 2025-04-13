@@ -21,6 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/field/field_meta.h"
 #include "storage/index/index_meta.h"
 #include "storage/record/record_manager.h"
+#include "vector_index_meta.h"
 
 class IndexScanner;
 
@@ -93,11 +94,14 @@ public:
    */
   virtual RC sync() = 0;
 
+   RC init_index_meta(const VectorIndexMeta &index_meta);
 protected:
   RC init(const IndexMeta &index_meta, const vector<FieldMeta*> &field_metas);
 
+
 protected:
   IndexMeta index_meta_;  ///< 索引的元数据
+  VectorIndexMeta vector_index_meta_;  ///< 索引的元数据
   FieldMeta field_meta_;  ///< 当前实现仅考虑一个字段的索引  们可以扩展为多个列的元数据
   vector<FieldMeta*> field_metas_; // 指针
 };

@@ -20,3 +20,9 @@ RC Index::init(const IndexMeta &index_meta, const vector<FieldMeta*> &field_meta
   field_metas_ = field_metas; // 列 meta
   return RC::SUCCESS;
 }
+
+RC Index::init_index_meta(const VectorIndexMeta &index_meta)
+{
+  vector_index_meta_ = index_meta;  // 索引 meta
+  return RC::SUCCESS;
+}

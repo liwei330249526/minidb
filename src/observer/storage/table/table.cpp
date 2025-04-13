@@ -14,6 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #include <limits.h>
 #include <string.h>
+#include <src/observer/storage/index/vector_index_meta.h>
+#include <src/observer/storage/index/ivfflat_index.h>
+#include <src/observer/sql/expr/tuple.h>
 
 #include "common/defs.h"
 #include "common/lang/string.h"
@@ -408,9 +411,8 @@ RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const ch
     LOG_INFO("Invalid input arguments, table name is %s, index_name is blank or attribute_name is blank", name());
     return RC::INVALID_ARGUMENT;
   }
-  // index 元数据
+  // index 元数据, 索引名字，索引列元数据
   IndexMeta new_index_meta;
-
 
   RC rc = new_index_meta.init(index_name, field_metas);
   if (rc != RC::SUCCESS) {
@@ -418,7 +420,7 @@ RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const ch
     for (auto &fm : field_metas) {
       field_meta_name += fm->name();
     }
-    LOG_INFO("Failed to init IndexMeta in table:%s, index_name:%s, field_name:%s", 
+    LOG_INFO("Failed to init IndexMeta in table:%s, index_name:%s, field_name:%s",
              name(), index_name, field_meta_name.c_str());
     return rc;
   }
@@ -426,7 +428,7 @@ RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const ch
   // 创建索引相关数据
   BplusTreeIndex *index      = new BplusTreeIndex();
   string          index_file = table_index_file(base_dir_.c_str(), name(), index_name);
-  // index 元数据， 列元数据
+  // index 文件名， 列元数据
   rc = index->create(this, index_file.c_str(), new_index_meta, field_metas);
   if (rc != RC::SUCCESS) {
     delete index;
@@ -438,13 +440,14 @@ RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const ch
   RecordFileScanner scanner;
   rc = get_record_scanner(scanner, trx, ReadWriteMode::READ_ONLY);
   if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to create scanner while creating index. table=%s, index=%s, rc=%s", 
+    LOG_WARN("failed to create scanner while creating index. table=%s, index=%s, rc=%s",
              name(), index_name, strrc(rc));
     return rc;
   }
 
   Record record;
   while (OB_SUCC(rc = scanner.next(record))) {
+    // 一行数据， 数据位置传入，插入索引
     rc = index->insert_entry(record.data(), &record.rid());
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
@@ -463,6 +466,121 @@ RC Table::create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const ch
   LOG_INFO("inserted all records into new index. table=%s, index=%s", name(), index_name);
 
   indexes_.push_back(index);
+
+  /// 接下来将这个索引放到表的元数据中
+  TableMeta new_table_meta(table_meta_);
+  rc = new_table_meta.add_index(new_index_meta);
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Failed to add index (%s) on table (%s). error=%d:%s", index_name, name(), rc, strrc(rc));
+    return rc;
+  }
+
+  /// 内存中有一份元数据，磁盘文件也有一份元数据。修改磁盘文件时，先创建一个临时文件，写入完成后再rename为正式文件
+  /// 这样可以防止文件内容不完整
+  // 创建元数据临时文件
+  string  tmp_file = table_meta_file(base_dir_.c_str(), name()) + ".tmp";
+  fstream fs;
+  fs.open(tmp_file, ios_base::out | ios_base::binary | ios_base::trunc);
+  if (!fs.is_open()) {
+    LOG_ERROR("Failed to open file for write. file name=%s, errmsg=%s", tmp_file.c_str(), strerror(errno));
+    return RC::IOERR_OPEN;  // 创建索引中途出错，要做还原操作
+  }
+  if (new_table_meta.serialize(fs) < 0) {
+    LOG_ERROR("Failed to dump new table meta to file: %s. sys err=%d:%s", tmp_file.c_str(), errno, strerror(errno));
+    return RC::IOERR_WRITE;
+  }
+  fs.close();
+
+  // 覆盖原始元数据文件
+  string meta_file = table_meta_file(base_dir_.c_str(), name());
+  // 临时文件，覆盖元数据文件
+  int ret = rename(tmp_file.c_str(), meta_file.c_str());
+  if (ret != 0) {
+    LOG_ERROR("Failed to rename tmp meta file (%s) to normal meta file (%s) while creating index (%s) on table (%s). "
+              "system error=%d:%s",
+              tmp_file.c_str(), meta_file.c_str(), index_name, name(), errno, strerror(errno));
+    return RC::IOERR_WRITE;
+  }
+  // 交换内存数据
+  table_meta_.swap(new_table_meta);
+
+  LOG_INFO("Successfully added a new index (%s) on the table (%s)", index_name, name());
+  return rc;
+}
+
+// vector index
+//VectorIndexType type_;
+//// Vector index type， 例如 ivf-flat
+//DistanceType distance_;  // 距离公式
+//int lists_;
+//int probes_;
+RC Table::create_vector_index(Trx *trx, const vector<FieldMeta*> &field_metas, const char *index_name, VectorIndexType type, DistanceType distance, int lists, int probes)
+{
+  if (common::is_blank(index_name) || field_metas.empty()) {
+    LOG_INFO("Invalid input arguments, table name is %s, index_name is blank or attribute_name is blank", name());
+    return RC::INVALID_ARGUMENT;
+  }
+  // index 元数据, 索引名字，索引列元数据
+  VectorIndexMeta new_index_meta;
+
+  RC rc = new_index_meta.init(index_name, field_metas, type, distance, lists, probes);
+  if (rc != RC::SUCCESS) {
+    string field_meta_name;
+    for (auto &fm : field_metas) {
+      field_meta_name += fm->name();
+    }
+    LOG_INFO("Failed to init IndexMeta in table:%s, index_name:%s, field_name:%s",
+             name(), index_name, field_meta_name.c_str());
+    return rc;
+  }
+
+  // 创建vector ifv-flat 索引相关数据
+  IvfflatIndex *index      = new IvfflatIndex(this);
+  string          index_file = table_vector_index_file(base_dir_.c_str(), name(), index_name);
+  // index 文件名， 列元数据
+  rc = index->create(this, trx, index_file.c_str(), new_index_meta, field_metas);
+  if (rc != RC::SUCCESS) {
+    delete index;
+    LOG_ERROR("Failed to create bplus tree index. file name=%s, rc=%d:%s", index_file.c_str(), rc, strrc(rc));
+    return rc;
+  }
+
+  // 遍历当前的所有数据，插入这个索引
+  RecordFileScanner scanner;
+  rc = get_record_scanner(scanner, trx, ReadWriteMode::READ_ONLY);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to create scanner while creating index. table=%s, index=%s, rc=%s",
+             name(), index_name, strrc(rc));
+    return rc;
+  }
+
+  Record record;
+  RowTuple tuple;
+  Value val;
+  while (OB_SUCC(rc = scanner.next(record))) {
+    // 一行数据， 数据位置传入，插入索引
+    tuple.set_record(&record);
+    tuple.set_schema(this, this->table_meta().field_metas());
+    tuple.cell_at(field_metas.front()->field_id(), val);
+    const vector<float> &vctor = val.get_vector();
+    rc = index->insert_entry(vctor, &record.rid());
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
+               name(), index_name, strrc(rc));
+      return rc;
+    }
+  }
+  if (RC::RECORD_EOF == rc) {
+    rc = RC::SUCCESS;
+  } else {
+    LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
+             name(), index_name, strrc(rc));
+    return rc;
+  }
+  scanner.close_scan();
+  LOG_INFO("inserted all records into new index. table=%s, index=%s", name(), index_name);
+
+  ivf_flat_indexes_.push_back(index);
 
   /// 接下来将这个索引放到表的元数据中
   TableMeta new_table_meta(table_meta_);

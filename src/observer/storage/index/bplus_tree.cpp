@@ -31,20 +31,24 @@ using namespace common;
  * 第一个页面存放元数据。
  */
 #define FIRST_INDEX_PAGE 1
-
+// 计算内部页容量
 int calc_internal_page_capacity(vector<int> &attr_lengths)
 {
+  // multi index 的多个列的长度和
   int attr_length = 0;
   for (size_t i = 0; i < attr_lengths.size(); i++) {
     attr_length += attr_lengths[i];
   }
+  // 一个项的长度
   int item_size = attr_length + sizeof(RID) + sizeof(PageNum);
+  // 一个页数据大小减去 header后，能存储多少个 item
   int capacity  = ((int)BP_PAGE_DATA_SIZE - InternalIndexNode::HEADER_SIZE) / item_size;
   return capacity;
 }
 
 int calc_leaf_page_capacity(vector<int> &attr_lengths)
 {
+  // 索引列长度和
   int attr_length = 0;
   for (size_t i = 0; i < attr_lengths.size(); i++) {
     attr_length += attr_lengths[i];
@@ -811,6 +815,7 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
                             int internal_max_size /* = -1*/,
                             int leaf_max_size /* = -1 */)
 {
+  // 创建文件，即 索引文件
   RC rc = bpm.create_file(file_name);
   if (OB_FAIL(rc)) {
     LOG_WARN("Failed to create file. file name=%s, rc=%d:%s", file_name, rc, strrc(rc));
@@ -819,7 +824,7 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
   LOG_INFO("Successfully create index file:%s", file_name);
 
   DiskBufferPool *bp = nullptr;
-
+  // 打开文件
   rc = bpm.open_file(log_handler, file_name, bp);
   if (OB_FAIL(rc)) {
     LOG_WARN("Failed to open file. file name=%s, rc=%d:%s", file_name, rc, strrc(rc));
@@ -852,7 +857,7 @@ RC BplusTreeHandler::create(LogHandler &log_handler,
   }
 
   log_handler_      = &log_handler;
-  disk_buffer_pool_ = &buffer_pool;
+  disk_buffer_pool_ = &buffer_pool; // 磁盘缓冲池
 
   RC rc = RC::SUCCESS;
 
@@ -1551,7 +1556,7 @@ RC BplusTreeHandler::insert_entry(vector<DataWrapper> &user_key, const RID *rid)
     LOG_WARN("Invalid arguments, key is empty or rid is empty");
     return RC::INVALID_ARGUMENT;
   }
-
+  // 构造key
   MemPoolItem::item_unique_ptr pkey = make_key(user_key,  *rid);
   if (pkey == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
@@ -1575,13 +1580,13 @@ RC BplusTreeHandler::insert_entry(vector<DataWrapper> &user_key, const RID *rid)
   }
 
   Frame *frame = nullptr;
-
+  // 找到叶子节点, 返回页帧
   rc = find_leaf(mtr, BplusTreeOperationType::INSERT, key, frame);
   if (OB_FAIL(rc)) {
     LOG_WARN("Failed to find leaf %s. rc=%d:%s", rid->to_string().c_str(), rc, strrc(rc));
     return rc;
   }
-
+  // 向页帧插入 key rid
   rc = insert_entry_into_leaf_node(mtr, frame, key, rid);
   if (OB_FAIL(rc)) {
     LOG_TRACE("Failed to insert into leaf of index, rid:%s. rc=%s", rid->to_string().c_str(), strrc(rc));

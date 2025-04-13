@@ -108,6 +108,11 @@ RC TableMeta::add_index(const IndexMeta &index)
   indexes_.push_back(index);
   return RC::SUCCESS;
 }
+RC TableMeta::add_index(const VectorIndexMeta &index)
+{
+  vector_indexes_.push_back(index);
+  return RC::SUCCESS;
+}
 
 const char *TableMeta::name() const { return name_.c_str(); }
 

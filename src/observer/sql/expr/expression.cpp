@@ -1111,6 +1111,8 @@ float VectorFunctionExpr::cosine_distance(const vector<float> &A, const vector<f
     norm_A += std::pow(A[i], 2);
     norm_B += std::pow(B[i], 2);
   }
+  // dot_product 是 A B 的点积
+  // norm_A norm_B 是的 A B 的模长
   norm_A = std::sqrt(norm_A);
   norm_B = std::sqrt(norm_B);
   return 1 - dot_product / (norm_A * norm_B);

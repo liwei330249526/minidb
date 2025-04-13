@@ -240,7 +240,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   file_name_ = file_name;
   file_desc_ = fd;
 
-  // 读出第一个page 的数据
+  // 读出文件的第一个page 的数据
   Page header_page;
   int ret = readn(file_desc_, &header_page, sizeof(header_page));
   if (ret != 0) {
@@ -359,27 +359,30 @@ RC DiskBufferPool::allocate_page(Frame **frame)
   lock_.lock();
 
   int byte = 0, bit = 0;
+  // 从文件头可知，该文件还有空闲 page
   if ((file_header_->allocated_pages) < (file_header_->page_count)) {
     // There is one free page
+    // 遍历所有page，获取第一个空闲 page
     for (int i = 0; i < file_header_->page_count; i++) {
       byte = i / 8;
       bit  = i % 8;
+      // 找到一个空闲 page;
       if (((file_header_->bitmap[byte]) & (1 << bit)) == 0) {
-        (file_header_->allocated_pages)++;
-        file_header_->bitmap[byte] |= (1 << bit);
+        (file_header_->allocated_pages)++; // 分配数++
+        file_header_->bitmap[byte] |= (1 << bit); // 设置非空
         // TODO,  do we need clean the loaded page's data?
-        hdr_frame_->mark_dirty();
+        hdr_frame_->mark_dirty(); // 头页面设置脏
         LSN lsn = 0;
-        rc = log_handler_.allocate_page(i, lsn);
+        rc = log_handler_.allocate_page(i, lsn); // 获取 lsn
         if (OB_FAIL(rc)) {
           LOG_ERROR("Failed to log allocate page %d, rc=%s", i, strrc(rc));
           // 忽略了错误
         }
 
-        hdr_frame_->set_lsn(lsn);
+        hdr_frame_->set_lsn(lsn); // 设置lsn
 
         lock_.unlock();
-        return get_this_page(i, frame);
+        return get_this_page(i, frame); // 获取这个page 到 frame内存中
       }
     }
   }
@@ -601,7 +604,7 @@ RC DiskBufferPool::recover_page(PageNum page_num)
 RC DiskBufferPool::write_page(PageNum page_num, Page &page)
 {
   scoped_lock lock_guard(wr_lock_);
-  int64_t     offset = ((int64_t)page_num) * sizeof(Page);
+  int64_t     offset = ((int64_t)page_num) * sizeof(Page);  // page num * page size
   if (lseek(file_desc_, offset, SEEK_SET) == -1) {
     LOG_ERROR("Failed to write page %lld of %d due to failed to seek %s.", offset, file_desc_, strerror(errno));
     return RC::IOERR_SEEK;
@@ -743,7 +746,7 @@ RC DiskBufferPool::load_page(PageNum page_num, Frame *frame)
   }
 
   scoped_lock lock_guard(wr_lock_);
-  int64_t          offset = ((int64_t)page_num) * BP_PAGE_SIZE;
+  int64_t          offset = ((int64_t)page_num) * BP_PAGE_SIZE; // page num * 8M
   if (lseek(file_desc_, offset, SEEK_SET) == -1) {
     LOG_ERROR("Failed to load page %s:%d, due to failed to lseek:%s.", file_name_.c_str(), page_num, strerror(errno));
 
@@ -823,8 +826,8 @@ RC BufferPoolManager::create_file(const char *file_name)
   file_header->page_count      = 1; // 当前文件共多少page
   file_header->buffer_pool_id  = next_buffer_pool_id_.fetch_add(1); // buffer pool 的id
 
-  char *bitmap = file_header->bitmap;
-  bitmap[0] |= 0x01; // 设置第1个 bit
+  char *bitmap = file_header->bitmap; // 数组首地址，即数组所在地址
+  bitmap[0] |= 0x01; // 设置第1个 bit 非空
   if (lseek(fd, 0, SEEK_SET) == -1) { // 指针定位到0
     LOG_ERROR("Failed to seek file %s to position 0, due to %s .", file_name, strerror(errno));
     close(fd);

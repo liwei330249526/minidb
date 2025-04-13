@@ -21,13 +21,14 @@ See the Mulan PSL v2 for more details. */
 #include "storage/record/record.h"
 #include "storage/record/record_log.h"
 #include "common/types.h"
+#include "storage/table/table.h"
 
 class LogHandler;
 class ConditionFilter;
 class RecordPageHandler;
 class LogHandler;
 class Trx;
-class Table;
+//class Table;
 
 /**
  * @brief 这里负责管理在一个文件上表记录(行)的组织/管理

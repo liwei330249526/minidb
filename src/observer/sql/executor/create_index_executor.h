@@ -31,3 +31,12 @@ public:
 
   RC execute(SQLStageEvent *sql_event);
 };
+
+class CreateVectorIndexExecutor
+{
+public:
+    CreateVectorIndexExecutor()          = default;
+    virtual ~CreateVectorIndexExecutor() = default;
+
+    RC execute(SQLStageEvent *sql_event);
+};

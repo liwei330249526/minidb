@@ -86,6 +86,7 @@ public:
 
   // TODO refactor
   RC create_index(Trx *trx, const vector<FieldMeta*> &field_metas, const char *index_name);
+  RC create_vector_index(Trx *trx, const vector<FieldMeta*> &field_metas, const char *index_name, VectorIndexType type, DistanceType distance, int lists, int probes);
 
   RC get_record_scanner(RecordFileScanner &scanner, Trx *trx, ReadWriteMode mode);
 
@@ -134,4 +135,5 @@ private:
   DiskBufferPool    *data_buffer_pool_ = nullptr;  /// 数据文件关联的buffer pool
   RecordFileHandler *record_handler_   = nullptr;  /// 记录操作
   vector<Index *>    indexes_;
+  vector<IvfflatIndex *>    ivf_flat_indexes_;
 };

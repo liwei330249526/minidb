@@ -24,7 +24,7 @@ using namespace common;
 RC CreateIndexStmt::create(Db *db, const CreateIndexSqlNode &create_index, Stmt *&stmt)
 {
   stmt = nullptr;
-
+  // 获取表名
   const char *table_name = create_index.relation_name.c_str();
   if (is_blank(table_name) || is_blank(create_index.index_name.c_str()) ||
       create_index.attribute_name.empty()) {
@@ -52,13 +52,13 @@ RC CreateIndexStmt::create(Db *db, const CreateIndexSqlNode &create_index, Stmt 
     }
     field_metas.push_back(field_meta);
   }
-
+  // 判断所以是否已经存在
   Index *index = table->find_index(create_index.index_name.c_str());
   if (nullptr != index) {
     LOG_WARN("index with name(%s) already exists. table name=%s", create_index.index_name.c_str(), table_name);
     return RC::SCHEMA_INDEX_NAME_REPEAT;
   }
-
+  // 表，列元数据，索引名字
   stmt = new CreateIndexStmt(table, field_metas, create_index.index_name);
   return RC::SUCCESS;
 }
