@@ -124,11 +124,12 @@ extern int yydebug;
     INNER_PRODUCT = 325,           /* INNER_PRODUCT  */
     IN = 326,                      /* IN  */
     EXISTS = 327,                  /* EXISTS  */
-    NUMBER = 328,                  /* NUMBER  */
-    FLOAT = 329,                   /* FLOAT  */
-    ID = 330,                      /* ID  */
-    SSS = 331,                     /* SSS  */
-    UMINUS = 332                   /* UMINUS  */
+    WITH = 328,                    /* WITH  */
+    NUMBER = 329,                  /* NUMBER  */
+    FLOAT = 330,                   /* FLOAT  */
+    ID = 331,                      /* ID  */
+    SSS = 332,                     /* SSS  */
+    UMINUS = 333                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -137,7 +138,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 140 "yacc_sql.y"
+#line 141 "yacc_sql.y"
    // %union 用于定义一个联合体（union），表示语法规则中符号的语义值（semantic value）可以存储的不同类型。 每个符号（终结符或非终结符）可以有一个语义值，%union 定义了这些语义值的可能类型。
   ParsedSqlNode *                            sql_node;
   ConditionSqlNode *                         condition;
@@ -166,7 +167,7 @@ union YYSTYPE
   std::vector<std::pair<Expression*, bool>> *     order_by_item_list_t;
   std::pair<Expression*, bool> *     order_by_item_t;
 
-#line 170 "yacc_sql.hpp"
+#line 171 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -134,6 +134,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         INNER_PRODUCT // 向量函数距离表达式  内积
         IN
         EXISTS
+        WITH
 
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
@@ -170,6 +171,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %token <floats> FLOAT     // 浮点 %token <floats> FLOAT 就是对 FLOAT 词法单元的声明，其中 <floats> 表示该词法单元的语义值类型为 floats（对应你在 %union 中定义的 floats 成员）。
 %token <string> ID
 %token <string> SSS
+
 //非终结符
 // %type 用于指定非终结符（non-terminal）或终结符（terminal）的语义值类型。它告诉 Yacc/Bison，某个符号的语义值应该使用 %union 中的哪个成员类型。%type <member> symbol;  <member>：%union 中定义的成员名称。symbol：非终结符或终结符的名称。
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -206,6 +208,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <vector_value>        vector_literal  // 新增：表示向量字面量的非终结符类型
 %type <subquery_expr>       subquery  // 新增：定义 subquery_expr 类型
 %type <valuelist_expr>      valuelist_expr_y // valueslists
+%type <string>              id_or_number
 %type <sql_node>            insert_stmt
 %type <sql_node>            update_stmt
 %type <sql_node>            delete_stmt
@@ -214,6 +217,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %type <sql_node>            show_tables_stmt
 %type <sql_node>            desc_table_stmt
 %type <sql_node>            create_index_stmt
+%type <sql_node>            create_vector_index_stmt
 %type <sql_node>            drop_index_stmt
 %type <sql_node>            sync_stmt
 %type <sql_node>            begin_stmt
@@ -252,6 +256,7 @@ command_wrapper:
   | show_tables_stmt
   | desc_table_stmt
   | create_index_stmt
+  | create_vector_index_stmt
   | drop_index_stmt
   | sync_stmt
   | begin_stmt
@@ -349,6 +354,48 @@ drop_index_stmt:      /*drop index 语句的语法解析树*/
       free($5);
     }
     ;
+
+id_or_number:
+    ID
+    {
+        $$ = new char[strlen($1) + 1];
+        strcpy($$, $1);
+        $$[strlen($1)] = '\0';
+    }
+    | NUMBER
+    {
+        $$ = new char[20];
+        sprintf($$, "%d", $1);
+    }
+// -- 创建索引
+// CREATE VECTOR INDEX V_I ON TAB_VEC(B) WITH(TYPE=IVFFLAT, DISTANCE=L2_DISTANCE, LISTS=3, PROBES=3);
+create_vector_index_stmt:    /*create index 语句的语法解析树*/
+    // 1     2       3     4  5  6   7    8    9    10     11    12 13      14       15    16 17     18        19   20 21    22         23   24 25     26        27
+    CREATE VECTOR_T INDEX ID ON ID LBRACE ID RBRACE WITH LBRACE ID EQ id_or_number COMMA  ID EQ id_or_number COMMA ID EQ id_or_number COMMA ID EQ id_or_number RBRACE
+    {
+        $$ = new ParsedSqlNode(SCF_CREATE_VECTOR_INDEX);  // 创建Vector 索引
+        CreateVectorIndexSqlNode &create_vector_index = $$->create_vector_index;
+        create_vector_index.index_name = $4;  // 索引名字
+        create_vector_index.relation_name = $6; // 表名字
+        create_vector_index.attribute_names = $8; // 列名字
+        create_vector_index.params[0] = {$12, $14};  // 4 个参数
+        create_vector_index.params[1] = {$16, $18};
+        create_vector_index.params[2] = {$20, $22};
+        create_vector_index.params[3] = {$24, $26};
+        free($4);
+        free($6);
+        free($8);
+        free($12);     // id 是 melloc 的动态内存
+        delete[] $14;  // id_or_number 是new 的对象
+        free($16);
+        delete[] $18;
+        free($20);
+        delete[] $22;
+        free($24);
+        delete[] $26;
+    }
+    ;
+
 create_table_stmt:    /*create table 语句的语法解析树*/
     CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE storage_format
     {

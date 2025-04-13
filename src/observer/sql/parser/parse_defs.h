@@ -210,6 +210,14 @@ struct CreateIndexSqlNode
   std::vector<std::string> attribute_name;  ///< Attribute name  字段名列表
 };
 
+struct CreateVectorIndexSqlNode
+{
+    std::string index_name;      ///< Index name
+    std::string relation_name;   ///< Relation name
+    std::string attribute_name;  ///< Attribute name  字段名列表
+    std::pair<std::string, std::string> params[4]; // 4 个参数; TYPE=IVFFLAT, DISTANCE=L2_DISTANCE, LISTS=3, PROBES=3
+};
+
 /**
  * @brief 描述一个drop index语句
  * @ingroup SQLParser
@@ -295,6 +303,7 @@ enum SqlCommandFlag
   SCF_CREATE_TABLE,
   SCF_DROP_TABLE,
   SCF_CREATE_INDEX,
+  SCF_CREATE_VECTOR_INDEX,
   SCF_DROP_INDEX,
   SCF_SYNC,
   SCF_SHOW_TABLES,
@@ -326,6 +335,7 @@ public:
   CreateTableSqlNode  create_table;
   DropTableSqlNode    drop_table;
   CreateIndexSqlNode  create_index;
+  CreateVectorIndexSqlNode create_vector_index;
   DropIndexSqlNode    drop_index;
   DescTableSqlNode    desc_table;
   LoadDataSqlNode     load_data;
