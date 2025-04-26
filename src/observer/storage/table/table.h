@@ -33,8 +33,11 @@ class RecordDeleter;
 class Trx;
 class Db;
 
+class IvfflatIndex;
+
 /**
  * @brief 表
+ * observer/storage/table/table.h
  *
  */
 class Table
@@ -135,5 +138,5 @@ private:
   DiskBufferPool    *data_buffer_pool_ = nullptr;  /// 数据文件关联的buffer pool
   RecordFileHandler *record_handler_   = nullptr;  /// 记录操作
   vector<Index *>    indexes_;
-  vector<IvfflatIndex *>    ivf_flat_indexes_;
+  vector<IvfflatIndex *>  ivf_flat_indexes_;
 };

@@ -228,16 +228,17 @@ RC Table::open(Db *db, const char *meta_file, const char *base_dir)
 
   return rc;
 }
-
+// 表中插入数据
 RC Table::insert_record(Record &record)
 {
   RC rc = RC::SUCCESS;
+  // 表中插入一行记录
   rc    = record_handler_->insert_record(record.data(), table_meta_.record_size(), &record.rid());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Insert record failed. table name=%s, rc=%s", table_meta_.name(), strrc(rc));
     return rc;
   }
-
+  // 将数据插入索引
   rc = insert_entry_of_indexes(record.data(), record.rid());
   if (rc != RC::SUCCESS) {  // 可能出现了键值重复
     RC rc2 = delete_entry_of_indexes(record.data(), record.rid(), false /*error_on_not_exists*/);
@@ -544,41 +545,41 @@ RC Table::create_vector_index(Trx *trx, const vector<FieldMeta*> &field_metas, c
     LOG_ERROR("Failed to create bplus tree index. file name=%s, rc=%d:%s", index_file.c_str(), rc, strrc(rc));
     return rc;
   }
-
-  // 遍历当前的所有数据，插入这个索引
-  RecordFileScanner scanner;
-  rc = get_record_scanner(scanner, trx, ReadWriteMode::READ_ONLY);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to create scanner while creating index. table=%s, index=%s, rc=%s",
-             name(), index_name, strrc(rc));
-    return rc;
-  }
-
-  Record record;
-  RowTuple tuple;
-  Value val;
-  while (OB_SUCC(rc = scanner.next(record))) {
-    // 一行数据， 数据位置传入，插入索引
-    tuple.set_record(&record);
-    tuple.set_schema(this, this->table_meta().field_metas());
-    tuple.cell_at(field_metas.front()->field_id(), val);
-    const vector<float> &vctor = val.get_vector();
-    rc = index->insert_entry(vctor, &record.rid());
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
-               name(), index_name, strrc(rc));
-      return rc;
-    }
-  }
-  if (RC::RECORD_EOF == rc) {
-    rc = RC::SUCCESS;
-  } else {
-    LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
-             name(), index_name, strrc(rc));
-    return rc;
-  }
-  scanner.close_scan();
-  LOG_INFO("inserted all records into new index. table=%s, index=%s", name(), index_name);
+//  index->create 已经获取了所有数据，并插入了索引
+  // 遍历当前的所有数据，插入这个索引，
+//  RecordFileScanner scanner;
+//  rc = get_record_scanner(scanner, trx, ReadWriteMode::READ_ONLY);
+//  if (rc != RC::SUCCESS) {
+//    LOG_WARN("failed to create scanner while creating index. table=%s, index=%s, rc=%s",
+//             name(), index_name, strrc(rc));
+//    return rc;
+//  }
+//
+//  Record record;
+//  RowTuple tuple;
+//  Value val;
+//  while (OB_SUCC(rc = scanner.next(record))) {
+//    // 一行数据， 数据位置传入，插入索引
+//    tuple.set_record(&record);
+//    tuple.set_schema(this, this->table_meta().field_metas());
+//    tuple.cell_at(field_metas.front()->field_id(), val);
+//    const vector<float> &vctor = val.get_vector();
+//    rc = index->insert_entry(vctor, &record.rid());
+//    if (rc != RC::SUCCESS) {
+//      LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
+//               name(), index_name, strrc(rc));
+//      return rc;
+//    }
+//  }
+//  if (RC::RECORD_EOF == rc) {
+//    rc = RC::SUCCESS;
+//  } else {
+//    LOG_WARN("failed to insert record into index while creating index. table=%s, index=%s, rc=%s",
+//             name(), index_name, strrc(rc));
+//    return rc;
+//  }
+//  scanner.close_scan();
+//  LOG_INFO("inserted all records into new index. table=%s, index=%s", name(), index_name);
 
   ivf_flat_indexes_.push_back(index);
 
@@ -600,6 +601,7 @@ RC Table::create_vector_index(Trx *trx, const vector<FieldMeta*> &field_metas, c
     LOG_ERROR("Failed to open file for write. file name=%s, errmsg=%s", tmp_file.c_str(), strerror(errno));
     return RC::IOERR_OPEN;  // 创建索引中途出错，要做还原操作
   }
+  // 序列化到文件中
   if (new_table_meta.serialize(fs) < 0) {
     LOG_ERROR("Failed to dump new table meta to file: %s. sys err=%d:%s", tmp_file.c_str(), errno, strerror(errno));
     return RC::IOERR_WRITE;

@@ -67,6 +67,14 @@ public:
     const vector<FieldMeta> &getFieldMetas() const;
     void setFieldMetas(const vector<FieldMeta> &fieldMetas);
 
+    int getLists() const;
+
+    void setLists(int lists);
+
+    int getProbes() const;
+
+    void setProbes(int probes);
+
 protected:
     string name_;   // index's name   索引名字
     mutable vector<FieldMeta> field_metas_; // FieldMeta 数组
@@ -79,18 +87,10 @@ protected:
     VectorIndexType type_;
     // Vector index type， 例如 ivf-flat
     DistanceType distance_;  // 距离公式
-    int lists_;
-public:
-    int getLists() const;
+    int lists_; // 质心个数
+    int probes_; // 探测几个簇
 
-    void setLists(int lists);
 
-    int getProbes() const;
-
-    void setProbes(int probes);
-
-protected:
-    int probes_;
 };
 
 

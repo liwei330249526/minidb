@@ -377,7 +377,7 @@ create_vector_index_stmt:    /*create index 语句的语法解析树*/
         CreateVectorIndexSqlNode &create_vector_index = $$->create_vector_index;
         create_vector_index.index_name = $4;  // 索引名字
         create_vector_index.relation_name = $6; // 表名字
-        create_vector_index.attribute_names = $8; // 列名字
+        create_vector_index.attribute_name = $8; // 列名字
         create_vector_index.params[0] = {$12, $14};  // 4 个参数
         create_vector_index.params[1] = {$16, $18};
         create_vector_index.params[2] = {$20, $22};

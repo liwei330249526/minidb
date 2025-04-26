@@ -1992,7 +1992,7 @@ yyreduce:
         CreateVectorIndexSqlNode &create_vector_index = (yyval.sql_node)->create_vector_index;
         create_vector_index.index_name = (yyvsp[-23].string);  // 索引名字
         create_vector_index.relation_name = (yyvsp[-21].string); // 表名字
-        create_vector_index.attribute_names = (yyvsp[-19].string); // 列名字
+        create_vector_index.attribute_name = (yyvsp[-19].string); // 列名字
         create_vector_index.params[0] = {(yyvsp[-15].string), (yyvsp[-13].string)};  // 4 个参数
         create_vector_index.params[1] = {(yyvsp[-11].string), (yyvsp[-9].string)};
         create_vector_index.params[2] = {(yyvsp[-7].string), (yyvsp[-5].string)};
@@ -2321,7 +2321,7 @@ yyreduce:
       }
 
      // 处理 JOIN 表
-     if ((yyvsp[-4].join_node_list) != nullptr) {
+     if ((yyvsp[-4].join_node_list) != nullptr) { // todo join_list 倒序
        for (const auto &join_relation : *(yyvsp[-4].join_node_list)) {
          (yyval.sql_node)->selection.relations.push_back(join_relation.right_table);  // join 表
          (yyval.sql_node)->selection.join_relations.push_back(join_relation); // join 表达式

@@ -21,6 +21,10 @@ See the Mulan PSL v2 for more details. */
 
 const static Json::StaticString FIELD_NAME("name");
 const static Json::StaticString FIELD_FIELD_NAME("field_name");
+const static Json::StaticString FIELD_VECTOR_INDEX_TYPE("vector_index_type");
+const static Json::StaticString FIELD_DISTANCE_TYPE("distance_type");
+const static Json::StaticString FIELD_CENTROID_NUM("centroid_num");
+const static Json::StaticString FIELD_PROBES("probes_num");
 
 RC VectorIndexMeta::init(const char *name, const vector<FieldMeta*> &field_metas,  VectorIndexType type, DistanceType distance, int lists, int probes)
 {
@@ -71,12 +75,17 @@ void VectorIndexMeta::to_json(Json::Value &json_value) const
 {
   // 索引名字
   json_value[FIELD_NAME]       = name_;
+  // // FieldMeta 数组
   for (auto &fm : field_metas_) {
     Json::Value v;
     fm.to_json(v);
-    // FieldMeta 数组
     json_value[FIELD_FIELD_NAME].append(v);
   }
+
+  json_value[FIELD_VECTOR_INDEX_TYPE] = (int)type_;
+  json_value[FIELD_DISTANCE_TYPE] = (int)distance_;
+  json_value[FIELD_CENTROID_NUM] = lists_;
+  json_value[FIELD_PROBES] = probes_;
 }
 
 RC VectorIndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, VectorIndexMeta &index)
@@ -103,11 +112,16 @@ RC VectorIndexMeta::from_json(const TableMeta &table, const Json::Value &json_va
 //  }
   // 获取  FieldMeta 数组
   vector<FieldMeta > field_metas(field_value.size());
-  for (int i = 0; i < field_value.size(); i++) {
+  for (unsigned int i = 0; i < field_value.size(); i++) {
     FieldMeta::from_json(field_value[i], field_metas[i]);
   }
 
-  return index.init(name_value.asCString(), field_metas);
+  VectorIndexType type = (VectorIndexType)(json_value[FIELD_VECTOR_INDEX_TYPE].asInt());
+  // Vector index type， 例如 ivf-flat
+  DistanceType distance = (DistanceType)(json_value[FIELD_DISTANCE_TYPE].asInt());;  // 距离公式
+  int lists = (int)(json_value[FIELD_CENTROID_NUM].asInt());;  // 距离公式 // 质心个数
+  int probes = (int)(json_value[FIELD_PROBES].asInt());
+  return index.init(name_value.asCString(), field_metas, type, distance, lists, probes);
 }
 
 const char *VectorIndexMeta::name() const { return name_.c_str(); }

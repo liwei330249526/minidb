@@ -25,7 +25,7 @@ const char *attr_type_to_string(AttrType type)
 string attr_type_to_string(vector<AttrType> types)
 {
   string res;
-  for (int i = 0; i < types.size(); i++) {
+  for (size_t i = 0; i < types.size(); i++) {
     AttrType type = types[i];
 
     if (type >= AttrType::UNDEFINED && type < AttrType::MAXTYPE) {

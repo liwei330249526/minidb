@@ -51,9 +51,11 @@ RC IvfflatIndex::open(Table *table, const char *file_name, const IndexMeta &inde
   }
 
   // 初始化索引元数据等
+  vector<FieldMeta*> field_metas;
+  field_metas.push_back((FieldMeta*)(&field_meta));
   Index::init(index_meta, field_metas);
 
-  BufferPoolManager &bpm = table->db()->buffer_pool_manager();
+//  BufferPoolManager &bpm = table->db()->buffer_pool_manager();
   RC rc = index_handler_.open(/* 相关参数 */);
   if (RC::SUCCESS != rc) {
     LOG_WARN("Failed to open index_handler, file_name:%s, index:%s, field:%s, rc:%s",
@@ -89,10 +91,49 @@ RC IvfflatIndex::close() {
   return RC::SUCCESS;
 }
 
-RC IvfflatIndex::insert_entry(const char *record, const RID *rid) {
+// 从行数据获取
+RC IvfflatIndex::insert_entry(const char *recordData, const RID *rid) {
   // 从 record 获取 vector，
   // insert  vector, rid
+  RowTuple tuple;
+  Value val;
+  Record record;
+  record.set_data((char *)recordData);
+  record.set_rid(*rid);
+
+  // ok
+//  int offset = index_meta_.getFieldMetas().front().offset();
+//  int dataLen = index_meta_.getFieldMetas().front().len();
+//  vector<float> vctor(dataLen / sizeof(float));
+//  memcpy(vctor.data(), record + offset, dataLen);
+
+//  attr_type_ = AttrType::VECTORS;
+//  value_.vector_value_ = new vector<float>(other.length() / sizeof(float)); // 一个float 的数组指针, 数据长度为 lenght_字节
+//  memcpy(this->value_.vector_value_->data(), other.value_.vector_value_->data(), other.length());
+
+  // 一行数据， 数据位置传入，插入索引
+  tuple.set_record(&record);
+  tuple.set_schema(table_, table_->table_meta().field_metas());
+  tuple.cell_at(index_meta_.getFieldMetas().front().field_id(), val);
+  vector<float> vctor = val.get_vector();
+  insert_entry(vctor, rid);
+
   return RC::INTERNAL;
+}
+
+
+RC IvfflatIndex::insert_entry(Record &record, const RID *rid) {
+  // 从 record 获取 vector，
+  // insert  vector, rid
+  RowTuple tuple;
+  Value val;
+
+  // 一行数据， 数据位置传入，插入索引
+  tuple.set_record(&record);
+  tuple.set_schema(table_, table_->table_meta().field_metas());
+  tuple.cell_at(index_meta_.getFieldMetas().front().field_id(), val);
+  vector<float> vctor = val.get_vector();
+  return insert_entry(vctor,&(record.rid()));
 }
 
 RC IvfflatIndex::insert_entry(const vector<float> &vctor, const RID *rid) {
@@ -102,8 +143,35 @@ RC IvfflatIndex::insert_entry(const vector<float> &vctor, const RID *rid) {
 }
 
 
-RC IvfflatIndex::delete_entry(const char *record, const RID *rid) {
-  return index_handler_.delete_entry(vector, rid);
+RC IvfflatIndex::delete_entry(const char *recordData, const RID *rid) {
+  // 从 record 获取 vector，
+  // insert  vector, rid
+  RowTuple tuple;
+  Value val;
+  Record record;
+  record.set_data((char *)recordData);
+  record.set_rid(*rid);
+
+  // ok
+//  int offset = index_meta_.getFieldMetas().front().offset();
+//  int dataLen = index_meta_.getFieldMetas().front().len();
+//  vector<float> vctor(dataLen / sizeof(float));
+//  memcpy(vctor.data(), record + offset, dataLen);
+
+//  attr_type_ = AttrType::VECTORS;
+//  value_.vector_value_ = new vector<float>(other.length() / sizeof(float)); // 一个float 的数组指针, 数据长度为 lenght_字节
+//  memcpy(this->value_.vector_value_->data(), other.value_.vector_value_->data(), other.length());
+
+  // 一行数据， 数据位置传入，插入索引
+  tuple.set_record(&record);
+  tuple.set_schema(table_, table_->table_meta().field_metas());
+  tuple.cell_at(index_meta_.getFieldMetas().front().field_id(), val);
+  vector<float> vctor = val.get_vector();
+  return delete_entry(vctor, rid);
+}
+
+RC IvfflatIndex::delete_entry(const vector<float> &vctor, const RID *rid) {
+  return index_handler_.delete_entry(vctor, rid);
 }
 
 RC IvfflatIndex::sync() {
@@ -114,3 +182,4 @@ IndexScanner *IvfflatIndex::create_scanner(vector<Value> &left_key, bool left_in
                                            bool right_inclusive) {
   return nullptr;
 }
+

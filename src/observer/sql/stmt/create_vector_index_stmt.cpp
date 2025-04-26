@@ -63,7 +63,7 @@ RC CreateVectorIndexStmt::create(Db *db, const CreateVectorIndexSqlNode &create_
   VectorIndexType type;
   int lists;
   int probes;
-  for (auto &p : create_index.params) {
+  for (auto p : create_index.params) {
     string key = common::str_to_upper(p.first);
     string val = common::str_to_upper(p.second);
 

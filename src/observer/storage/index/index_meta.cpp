@@ -90,7 +90,7 @@ RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, I
 //    return RC::SCHEMA_FIELD_MISSING;
 //  }
   vector<FieldMeta > field_metas(field_value.size());
-  for (int i = 0; i < field_value.size(); i++) {
+  for (unsigned int i = 0; i < field_value.size(); i++) {
     FieldMeta::from_json(field_value[i], field_metas[i]);
   }
 
